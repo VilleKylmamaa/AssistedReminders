@@ -1,6 +1,9 @@
 package com.ville.assistedreminders.ui
 
+import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.ville.assistedreminders.ui.accountSettings.ChangePassword
@@ -8,11 +11,13 @@ import com.ville.assistedreminders.ui.accountSettings.ChangeUsername
 import com.ville.assistedreminders.ui.home.Home
 import com.ville.assistedreminders.ui.login.Login
 import com.ville.assistedreminders.ui.login.Signup
-import com.ville.assistedreminders.ui.reminders.addReminder.Reminder
+import com.ville.assistedreminders.ui.reminders.addReminder.AddReminder
 
 @Composable
 fun AssistedReminders(
-    appState: AssistedRemindersAppState = rememberAssistedRemindersAppState()
+    appState: AssistedRemindersAppState = rememberAssistedRemindersAppState(),
+    resultLauncher: ActivityResultLauncher<Intent>,
+    speechText: MutableState<String>
 ){
     NavHost(
         navController = appState.navController,
@@ -25,10 +30,17 @@ fun AssistedReminders(
             Signup(navController = appState.navController, onBackPress = appState::navigateBack)
         }
         composable(route = "home") {
-            Home(navController = appState.navController)
+            Home(navController = appState.navController,
+                resultLauncher = resultLauncher,
+                speechText = speechText
+            )
         }
-        composable(route = "reminder") {
-            Reminder(onBackPress = appState::navigateBack)
+        composable(route = "addReminder") {
+            AddReminder(
+                onBackPress = appState::navigateBack,
+                resultLauncher = resultLauncher,
+                speechText = speechText
+            )
         }
         composable(route = "username") {
             ChangeUsername(onBackPress = appState::navigateBack)

@@ -33,7 +33,7 @@ fun ChangeUsername(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
-                        contentDescription = null,
+                        contentDescription = "Back button",
                         tint = MaterialTheme.colors.onSecondary
                     )
                 }

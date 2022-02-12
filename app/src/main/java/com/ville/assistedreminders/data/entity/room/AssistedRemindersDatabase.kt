@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.ville.assistedreminders.data.entity.Account
+import com.ville.assistedreminders.data.entity.Converters
 import com.ville.assistedreminders.data.entity.Reminder
+
 
 /*
  * The [RoomDatabase] for this app
@@ -15,10 +18,11 @@ import com.ville.assistedreminders.data.entity.Reminder
         Reminder::class,
         Account::class
     ],
-    version = 6,
+    version = 13,
     exportSchema = false
 )
 
+@TypeConverters(Converters::class)
 abstract class AssistedRemindersDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
     abstract fun accountDao(): AccountDao

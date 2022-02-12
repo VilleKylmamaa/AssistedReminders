@@ -147,7 +147,7 @@ fun Signup(
                                     navController.navigate("home")
                                     makeToast(
                                         context, "New account created!" +
-                                                " You have been logged in with the new account"
+                                                " Logged in as: ${username.value}"
                                     )
                                 } else {
                                     makeToast(context, "Account with this username already exists")

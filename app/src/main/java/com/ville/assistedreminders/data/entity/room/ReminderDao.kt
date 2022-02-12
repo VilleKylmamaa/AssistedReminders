@@ -1,16 +1,20 @@
 package com.ville.assistedreminders.data.entity.room
 
-import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.ville.assistedreminders.data.entity.Reminder
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class ReminderDao {
-    @Query("SELECT * FROM reminders")
-    abstract fun reminders(): Flow<List<Reminder>>
+    @Query("""
+        SELECT reminders.* FROM reminders
+        INNER JOIN accounts ON reminders.creator_id = accounts.id
+        WHERE creator_id = :accountId
+        ORDER BY reminder_time ASC
+    """)
+    abstract fun getRemindersForAccount(accountId: Long): Flow<List<ReminderToAccount>>
 
-    @Query("SELECT COUNT(reminder_title) FROM reminders LIMIT 1")
+    @Query("SELECT COUNT(id) FROM reminders LIMIT 1")
     abstract suspend fun getReminderCount(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

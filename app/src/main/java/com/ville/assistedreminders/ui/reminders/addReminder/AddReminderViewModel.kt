@@ -1,33 +1,34 @@
 package com.ville.assistedreminders.ui.reminders.addReminder
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.ville.assistedreminders.Graph
+import com.ville.assistedreminders.Graph.accountRepository
+import com.ville.assistedreminders.data.entity.Account
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.repository.ReminderRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import com.ville.assistedreminders.ui.MainActivity
+import java.util.*
 
 class ReminderViewModel(
     private val reminderRepository: ReminderRepository = Graph.reminderRepository
 ): ViewModel() {
-    private val _state = MutableStateFlow(ReminderViewState())
-
-    val state: StateFlow<ReminderViewState>
-        get() = _state
+    suspend fun getLoggedInAccount(): Account? {
+        return accountRepository.getLoggedInAccount()
+    }
 
     suspend fun saveReminder(reminder: Reminder): Long {
         return reminderRepository.addReminder(reminder)
     }
-
-    init {
-        viewModelScope.launch {
-            reminderRepository.reminders()
-        }
-    }
 }
 
 data class ReminderViewState(
-    val reminders: List<Reminder> = emptyList()
+    val textFromSpeech: String? = null,
 )

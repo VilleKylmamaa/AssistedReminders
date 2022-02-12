@@ -1,13 +1,16 @@
 package com.ville.assistedreminders.ui.reminders.addReminder
 
 import android.content.Context
+import android.content.Intent
+import android.speech.RecognizerIntent
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -17,26 +20,38 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.insets.systemBarsPadding
 import kotlinx.coroutines.launch
 import com.ville.assistedreminders.data.entity.Reminder
+import com.ville.assistedreminders.ui.theme.reminderIcon
+import java.util.*
 
 
 @Composable
-fun Reminder(
+fun AddReminder(
+    viewModel: ReminderViewModel = viewModel(),
     onBackPress: () -> Unit,
-    viewModel: ReminderViewModel = viewModel()
+    resultLauncher: ActivityResultLauncher<Intent>,
+    speechText: MutableState<String>
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val title = rememberSaveable { mutableStateOf("") }
+    val message = remember { mutableStateOf("") }
+    val previousSpeechText = remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    if (speechText.value != previousSpeechText.value) {
+        message.value = speechText.value.replaceFirstChar { it.uppercase() }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Row {
             TopAppBar {
                 IconButton(
-                    onClick = onBackPress
+                    onClick = {
+                        speechText.value = ""
+                        onBackPress()
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
-                        contentDescription = null,
+                        contentDescription = "Back button",
                         tint = MaterialTheme.colors.onSecondary
                     )
                 }
@@ -46,6 +61,7 @@ fun Reminder(
                 )
             }
         }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -59,24 +75,88 @@ fun Reminder(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-            OutlinedTextField(
-                value = title.value,
-                onValueChange = { title.value = it },
-                label = { Text("Reminder title") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            )
+            Row {
+                OutlinedTextField(
+                    value = message.value,
+                    onValueChange = { message.value = it },
+                    label = { Text("Message") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                previousSpeechText.value = speechText.value
+                                speechToText(resultLauncher)
+                            },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .padding(horizontal = 5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Mic,
+                                contentDescription = "Chosen icon",
+                                tint = MaterialTheme.colors.reminderIcon
+                            )
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = { /* TODO */ },
+                enabled = false,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .size(55.dp)
+                    .padding(horizontal = 16.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(
+                    text = "Schedule",
+                    color = MaterialTheme.colors.onPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = { /* TODO */ },
+                enabled = false,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .size(55.dp)
+                    .padding(horizontal = 16.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(
+                    text = "Set Location",
+                    color = MaterialTheme.colors.onPrimary
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
-                    if (isValid(title.value, context)) {
+                    if (isValid(message.value, context)) {
                         coroutineScope.launch {
-                            viewModel.saveReminder(
-                                Reminder(
-                                    reminderTitle = title.value,
+                            val loggedInAccount = viewModel.getLoggedInAccount()
+                            if (loggedInAccount != null) {
+                                viewModel.saveReminder(
+                                    Reminder(
+                                        message = message.value,
+                                        location_x = "65.021545",
+                                        location_y = "25.469885",
+                                        reminder_time = Calendar.getInstance().time,
+                                        creation_time = Calendar.getInstance().time,
+                                        creator_id = loggedInAccount.accountId,
+                                        reminder_seen = false,
+                                        icon = "Circle"
+                                    )
                                 )
-                            )
-                            makeToast(context, "New reminder added: ${title.value}")
+                                message.value = ""
+                                speechText.value = ""
+                            }
                         }
                         onBackPress()
                     }
@@ -97,14 +177,24 @@ fun Reminder(
     }
 }
 
-private fun makeToast(context: Context, text: String) {
-    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+fun speechToText(resultLauncher: ActivityResultLauncher<Intent>) {
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+    intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Talk to input reminder message")
+    resultLauncher.launch(intent)
 }
 
-private fun isValid(reminder: String, context: Context): Boolean {
-    if (reminder.isEmpty()) {
-        makeToast(context, "Enter title for the reminder")
+private fun isValid(message: String, context: Context): Boolean {
+    if (message.isEmpty()) {
+        Toast.makeText(context, "Enter message for the reminder", Toast.LENGTH_SHORT).show()
         return false
     }
     return true
 }
+
+
+
+
+
+
+

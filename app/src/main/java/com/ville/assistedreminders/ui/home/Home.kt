@@ -1,6 +1,8 @@
 package com.ville.assistedreminders.ui.home
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -25,7 +27,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun Home(
     viewModel: HomeViewModel = viewModel(),
-    navController: NavController
+    navController: NavController,
+    resultLauncher: ActivityResultLauncher<Intent>,
+    speechText: MutableState<String>
 ) {
     // Stops back button from going back to login screen
     BackHandler(true) { /* Do nothing */ }
@@ -33,7 +37,9 @@ fun Home(
     Surface(modifier = Modifier.fillMaxSize()) {
         HomeContent(
             navController = navController,
-            viewModel = viewModel
+            viewModel = viewModel,
+            resultLauncher = resultLauncher,
+            speechText = speechText
         )
     }
 }
@@ -41,13 +47,15 @@ fun Home(
 @Composable
 fun HomeContent(
     navController: NavController,
-    viewModel: HomeViewModel
+    viewModel: HomeViewModel,
+    resultLauncher: ActivityResultLauncher<Intent>,
+    speechText: MutableState<String>
 ) {
     Scaffold(
         modifier = Modifier.padding(bottom = 24.dp),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(route = "reminder") },
+                onClick = { navController.navigate(route = "addReminder") },
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
                 modifier = Modifier.padding(all = 20.dp)
@@ -65,7 +73,7 @@ fun HomeContent(
             .fillMaxWidth()
         ) {
             HomeAppBar(navController, viewModel)
-            ReminderList()
+            ReminderList(resultLauncher, speechText)
         }
     }
 }
