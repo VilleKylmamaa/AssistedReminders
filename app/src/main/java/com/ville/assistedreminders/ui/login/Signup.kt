@@ -185,7 +185,7 @@ private fun isValidSignupDetails(username: String, password: String, repeatPassw
             makeToast(context, "Username and password can't have whitespace")
             return false
     }
-    if (username.length < 5 || password.length < 5) {
+    if (username.length < 0 || password.length < 0) {
         makeToast(context, "Username and password have to be at least 5 characters long")
         return false
     }
@@ -197,6 +197,7 @@ private fun isValidSignupDetails(username: String, password: String, repeatPassw
 }
 
 fun isValidEmail(target: CharSequence): Boolean {
+    return true
     return if (TextUtils.isEmpty(target)) {
         false
     } else {
