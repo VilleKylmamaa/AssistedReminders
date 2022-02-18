@@ -3,6 +3,7 @@ package com.ville.assistedreminders.data.entity.room
 import androidx.room.*
 import com.ville.assistedreminders.data.entity.Reminder
 import kotlinx.coroutines.flow.Flow
+import java.util.*
 
 @Dao
 abstract class ReminderDao {
@@ -13,6 +14,14 @@ abstract class ReminderDao {
         ORDER BY reminder_time ASC
     """)
     abstract fun getRemindersForAccount(accountId: Long): Flow<List<ReminderToAccount>>
+
+    @Query("""
+        SELECT reminders.* FROM reminders
+        INNER JOIN accounts ON reminders.creator_id = accounts.id
+        WHERE creator_id = :accountId AND reminder_time < :time
+        ORDER BY reminder_time ASC
+    """)
+    abstract fun getRemindersBefore(accountId: Long, time: Date): Flow<List<ReminderToAccount>>
 
     @Query("SELECT COUNT(id) FROM reminders LIMIT 1")
     abstract suspend fun getReminderCount(): Int

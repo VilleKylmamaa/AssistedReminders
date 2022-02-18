@@ -1,5 +1,7 @@
 package com.ville.assistedreminders.ui.reminders.addReminder
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.speech.RecognizerIntent
@@ -21,6 +23,7 @@ import com.google.accompanist.insets.systemBarsPadding
 import kotlinx.coroutines.launch
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.ui.theme.reminderIcon
+import java.text.SimpleDateFormat
 import java.util.*
 
 
@@ -34,7 +37,11 @@ fun AddReminder(
     val coroutineScope = rememberCoroutineScope()
     val message = remember { mutableStateOf("") }
     val previousSpeechText = remember { mutableStateOf("") }
+    val scheduling: Calendar = Calendar.getInstance()
+    val shownDate = remember { mutableStateOf("Date not set") }
+    val shownTime = remember { mutableStateOf("Time not set") }
     val context = LocalContext.current
+
 
     if (speechText.value != previousSpeechText.value) {
         message.value = speechText.value.replaceFirstChar { it.uppercase() }
@@ -104,19 +111,82 @@ fun AddReminder(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { /* TODO */ },
-                enabled = false,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .size(55.dp)
-                    .padding(horizontal = 16.dp),
-                shape = MaterialTheme.shapes.medium
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Schedule",
-                    color = MaterialTheme.colors.onPrimary
+                    text = shownDate.value,
+                    color = MaterialTheme.colors.onSecondary,
+                    modifier = Modifier.padding(horizontal = 30.dp)
                 )
+                Button(
+                    onClick = {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                scheduling[Calendar.DAY_OF_MONTH] = dayOfMonth
+                                scheduling[Calendar.MONTH] = month
+                                scheduling[Calendar.YEAR] = year
+                                shownDate.value = scheduling.time.formatDateToString()
+                            },
+                            scheduling[Calendar.YEAR],
+                            scheduling[Calendar.MONTH],
+                            scheduling[Calendar.DAY_OF_MONTH]
+                        ).show()
+                    },
+                    enabled = true,
+                    modifier = Modifier
+                        .width(150.dp)
+                        .size(50.dp)
+                        .padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "Set Date",
+                        color = MaterialTheme.colors.onPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = shownTime.value,
+                    color = MaterialTheme.colors.onSecondary,
+                    modifier = Modifier.padding(horizontal = 30.dp)
+                )
+                Button(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                scheduling[Calendar.HOUR_OF_DAY] = hourOfDay
+                                scheduling[Calendar.MINUTE] = minute
+                                shownTime.value = scheduling.time.formatTimeToString()
+                            },
+                            scheduling[Calendar.HOUR_OF_DAY],
+                            scheduling[Calendar.MINUTE],
+                            true
+                        ).show()
+                    },
+                    enabled = true,
+                    modifier = Modifier
+                        .width(150.dp)
+                        .size(50.dp)
+                        .padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "Set Time",
+                        color = MaterialTheme.colors.onPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -147,7 +217,7 @@ fun AddReminder(
                                         message = message.value,
                                         location_x = "65.021545",
                                         location_y = "25.469885",
-                                        reminder_time = Calendar.getInstance().time,
+                                        reminder_time = scheduling.time,
                                         creation_time = Calendar.getInstance().time,
                                         creator_id = loggedInAccount.accountId,
                                         reminder_seen = false,
@@ -192,9 +262,13 @@ private fun isValid(message: String, context: Context): Boolean {
     return true
 }
 
+private fun Date.formatDateToString(): String {
+    return SimpleDateFormat("E dd MMMM yyyy", Locale.getDefault()).format(this)
+}
 
-
-
+private fun Date.formatTimeToString(): String {
+    return SimpleDateFormat("kk:mm", Locale.getDefault()).format(this)
+}
 
 
 

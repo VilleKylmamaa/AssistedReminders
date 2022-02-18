@@ -34,16 +34,37 @@ class ReminderListViewModel(
         reminderRepository.deleteReminder(reminder)
     }
 
-    init {
-        viewModelScope.launch {
-            val loggedInAccount = getLoggedInAccount()
-            if (loggedInAccount != null) {
+    suspend fun showAllSwitch(showAll: Boolean) {
+        val loggedInAccount = getLoggedInAccount()
+        if (loggedInAccount != null) {
+            if (showAll) {
                 reminderRepository.getRemindersForAccount(loggedInAccount.accountId)
                     .collect { list ->
                         _state.value = ReminderListViewState(
                             remindersForAccount = MutableLiveData(list)
                         )
-                }
+                    }
+            } else {
+                reminderRepository.getRemindersBefore(loggedInAccount.accountId, Calendar.getInstance().time)
+                    .collect { list ->
+                        _state.value = ReminderListViewState(
+                            remindersForAccount = MutableLiveData(list)
+                        )
+                    }
+            }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            val loggedInAccount = getLoggedInAccount()
+            if (loggedInAccount != null) {
+                reminderRepository.getRemindersBefore(loggedInAccount.accountId, Calendar.getInstance().time)
+                    .collect { list ->
+                        _state.value = ReminderListViewState(
+                            remindersForAccount = MutableLiveData(list)
+                        )
+                    }
             }
         }
         addRemindersToDb()
@@ -79,7 +100,7 @@ class ReminderListViewModel(
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
                         reminder_seen = false,
-                        icon = "Circle"
+                        icon = "SportsEsports"
                     ),
                     Reminder(
                         message = "Walk the dog",
@@ -89,7 +110,7 @@ class ReminderListViewModel(
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
                         reminder_seen = false,
-                        icon = "Circle"
+                        icon = "Pets"
                     ),
                     Reminder(
                         message = "Meditate",
@@ -99,7 +120,7 @@ class ReminderListViewModel(
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
                         reminder_seen = false,
-                        icon = "Circle"
+                        icon = "SelfImprovement"
                     ),
                     Reminder(
                         message = "Buy groceries",
@@ -109,7 +130,7 @@ class ReminderListViewModel(
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
                         reminder_seen = false,
-                        icon = "Circle"
+                        icon = "ShoppingCart"
                     ),
                     Reminder(
                         message = "Graduate",
@@ -119,7 +140,7 @@ class ReminderListViewModel(
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
                         reminder_seen = false,
-                        icon = "Circle"
+                        icon = "Grade"
                     ),
                 )
 

@@ -26,6 +26,7 @@ import com.ville.assistedreminders.ui.reminders.dialog.EditForm
 import com.ville.assistedreminders.ui.theme.reminderIcon
 import com.ville.assistedreminders.ui.theme.reminderMessage
 import com.ville.assistedreminders.util.viewModelProviderFactoryOf
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,6 +40,8 @@ fun ReminderList(
         factory = viewModelProviderFactoryOf { ReminderListViewModel() }
     )
     val viewState by viewModel.state.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val showAll = remember { mutableStateOf(false) }
 
     Column {
         ReminderColumn(
@@ -48,7 +51,37 @@ fun ReminderList(
             speechText = speechText
         )
     }
+
+    Spacer(modifier = Modifier.height(24.dp))
+    // Button to show all reminders
+    Button(
+        onClick = {
+            showAll.value = !showAll.value
+            coroutineScope.launch {
+                viewModel.showAllSwitch(showAll.value)
+            }
+        },
+        enabled = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .size(55.dp)
+            .padding(horizontal = 16.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        if (!showAll.value) {
+            Text(
+                text = "Show All",
+                color = MaterialTheme.colors.onPrimary
+            )
+        } else {
+            Text(
+                text = "Don't Show All",
+                color = MaterialTheme.colors.onPrimary
+            )
+        }
+    }
 }
+
 
 @Composable
 private fun ReminderColumn(
