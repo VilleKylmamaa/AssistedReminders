@@ -3,7 +3,6 @@ package com.ville.assistedreminders.ui.login
 import android.content.Context
 import android.text.TextUtils
 import android.util.Patterns
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -24,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.accompanist.insets.systemBarsPadding
 import com.ville.assistedreminders.data.entity.Account
+import com.ville.assistedreminders.util.makeShortToast
 import kotlinx.coroutines.launch
 
 
@@ -145,15 +145,15 @@ fun Signup(
                                     )
                                     viewModel.addAccount(newAccount)
                                     navController.navigate("home")
-                                    makeToast(
+                                    makeShortToast(
                                         context, "New account created!" +
                                                 " Logged in as: ${username.value}"
                                     )
                                 } else {
-                                    makeToast(context, "Account with this username already exists")
+                                    makeShortToast(context, "Account with this username already exists")
                                 }
                             } else {
-                                makeToast(context, "Enter a valid email address")
+                                makeShortToast(context, "Enter a valid email address")
                             }
                         }
                     }
@@ -174,30 +174,25 @@ fun Signup(
     }
 }
 
-private fun makeToast(context: Context, text: String) {
-    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-}
-
 private fun isValidSignupDetails(username: String, password: String, repeatPassword: String,
     context: Context): Boolean {
     if (username.filter { !it.isWhitespace() }.length < username.length
         || password.filter { !it.isWhitespace() }.length < password.length) {
-            makeToast(context, "Username and password can't have whitespace")
+            makeShortToast(context, "Username and password can't have whitespace")
             return false
     }
-    if (username.length < 0 || password.length < 0) {
-        makeToast(context, "Username and password have to be at least 5 characters long")
+    if (username.length < 5 || password.length < 5) {
+        makeShortToast(context, "Username and password have to be at least 5 characters long")
         return false
     }
     if (password != repeatPassword) {
-        makeToast(context, "Password and repeat password don't match")
+        makeShortToast(context, "Password and repeat password don't match")
         return false
     }
     return true
 }
 
 fun isValidEmail(target: CharSequence): Boolean {
-    return true
     return if (TextUtils.isEmpty(target)) {
         false
     } else {

@@ -1,13 +1,17 @@
 package com.ville.assistedreminders.ui.reminders
 
+
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ville.assistedreminders.Graph
+import com.ville.assistedreminders.Graph.notificationRepository
 import com.ville.assistedreminders.data.entity.Account
+import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.repository.ReminderRepository
 import com.ville.assistedreminders.data.entity.room.ReminderToAccount
+import com.ville.assistedreminders.util.scheduleReminderNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
@@ -32,6 +36,11 @@ class ReminderListViewModel(
 
     suspend fun deleteReminder(reminder: Reminder) {
         reminderRepository.deleteReminder(reminder)
+    }
+
+    suspend fun addNotification(notification: Notification, reminder: Reminder, scheduling: Calendar) {
+        val notificationId = notificationRepository.addNotification(notification)
+        scheduleReminderNotification(notificationId, reminder, scheduling)
     }
 
     suspend fun showAllSwitch(showAll: Boolean) {

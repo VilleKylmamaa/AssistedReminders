@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -20,11 +21,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.room.ReminderToAccount
-import com.ville.assistedreminders.ui.reminders.dialog.ChooseIconForm
-import com.ville.assistedreminders.ui.reminders.dialog.DeleteConfirmation
-import com.ville.assistedreminders.ui.reminders.dialog.EditForm
-import com.ville.assistedreminders.ui.theme.reminderIcon
-import com.ville.assistedreminders.ui.theme.reminderMessage
+import com.ville.assistedreminders.ui.reminders.reminderDialog.AddNotificationDialog
+import com.ville.assistedreminders.ui.reminders.reminderDialog.ChooseIconDialog
+import com.ville.assistedreminders.ui.reminders.reminderDialog.DeleteDialog
+import com.ville.assistedreminders.ui.reminders.reminderDialog.EditDialog
+import com.ville.assistedreminders.ui.theme.*
 import com.ville.assistedreminders.util.viewModelProviderFactoryOf
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -40,55 +41,30 @@ fun ReminderList(
         factory = viewModelProviderFactoryOf { ReminderListViewModel() }
     )
     val viewState by viewModel.state.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
     val showAll = remember { mutableStateOf(false) }
+    val showAllText = remember { mutableStateOf("Show All") }
 
     Column {
         ReminderColumn(
             list = viewState.remindersForAccount,
             viewModel = viewModel,
             resultLauncher = resultLauncher,
-            speechText = speechText
+            speechText = speechText,
+            showAll = showAll,
+            showAllText = showAllText
         )
     }
-
-    Spacer(modifier = Modifier.height(24.dp))
-    // Button to show all reminders
-    Button(
-        onClick = {
-            showAll.value = !showAll.value
-            coroutineScope.launch {
-                viewModel.showAllSwitch(showAll.value)
-            }
-        },
-        enabled = true,
-        modifier = Modifier
-            .fillMaxWidth()
-            .size(55.dp)
-            .padding(horizontal = 16.dp),
-        shape = MaterialTheme.shapes.medium
-    ) {
-        if (!showAll.value) {
-            Text(
-                text = "Show All",
-                color = MaterialTheme.colors.onPrimary
-            )
-        } else {
-            Text(
-                text = "Don't Show All",
-                color = MaterialTheme.colors.onPrimary
-            )
-        }
-    }
+    ShowAllButton(viewModel, showAll, showAllText)
 }
-
 
 @Composable
 private fun ReminderColumn(
     list: MutableLiveData<List<ReminderToAccount>>,
     viewModel: ReminderListViewModel,
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
 ) {
     LazyColumn(
         contentPadding = PaddingValues(0.dp),
@@ -100,9 +76,51 @@ private fun ReminderColumn(
                 modifier = Modifier.fillParentMaxWidth(),
                 viewModel = viewModel,
                 resultLauncher = resultLauncher,
-                speechText = speechText
+                speechText = speechText,
+                showAll = showAll,
+                showAllText = showAllText
             )
         }
+    }
+}
+
+@Composable
+private fun ShowAllButton(
+    viewModel: ReminderListViewModel,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Spacer(modifier = Modifier.height(24.dp))
+    // Button to show all reminders
+    Button(
+    onClick = {
+        showAll.value = !showAll.value
+        if (showAll.value) {
+            showAllText.value = "Hide"
+        } else {
+            showAllText.value = "Show All"
+        }
+        coroutineScope.launch {
+            viewModel.showAllSwitch(showAll.value)
+        }
+    },
+    enabled = true,
+    colors = ButtonDefaults.buttonColors(
+        backgroundColor = MaterialTheme.colors.showAllButtonBackground,
+        contentColor = Color.Black
+    ),
+    modifier = Modifier
+        .width(130.dp)
+        .size(45.dp)
+        .padding(horizontal = 16.dp),
+    shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = showAllText.value,
+            color = MaterialTheme.colors.onPrimary
+        )
     }
 }
 
@@ -112,11 +130,14 @@ private fun ReminderColumnItem(
     modifier: Modifier = Modifier,
     viewModel: ReminderListViewModel,
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
 ) {
-    val openChooseIcon = remember { mutableStateOf(false) }
-    val openDeleteConfirmation = remember { mutableStateOf(false) }
-    val openEditForm = remember { mutableStateOf(false) }
+    val openChooseIconDialog = remember { mutableStateOf(false) }
+    val openDeleteDialog = remember { mutableStateOf(false) }
+    val openEditDialog = remember { mutableStateOf(false) }
+    val openNotificationDialog = remember { mutableStateOf(false) }
     speechText.value = ""
 
     ConstraintLayout(modifier = modifier) {
@@ -138,7 +159,7 @@ private fun ReminderColumnItem(
         // Chosen icon
         IconButton(
             onClick = {
-                openChooseIcon.value = true
+                openChooseIconDialog.value = true
             },
             modifier = Modifier
                 .size(40.dp)
@@ -148,7 +169,7 @@ private fun ReminderColumnItem(
                         start = parent.start,
                         end = reminderMessage.end,
                         startMargin = 0.dp,
-                        endMargin = 170.dp
+                        endMargin = 125.dp
                     )
                     top.linkTo(parent.top, 8.dp)
                 }
@@ -213,11 +234,20 @@ private fun ReminderColumnItem(
                 }
         ) {
             IconButton(
-                onClick = {
-                    openEditForm.value = true
-                },
+                onClick = { openNotificationDialog.value = true },
                 modifier = Modifier
-                    .size(55.dp)
+                    .size(50.dp)
+                    .padding(5.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = "Add Notification"
+                )
+            }
+            IconButton(
+                onClick = { openEditDialog.value = true },
+                modifier = Modifier
+                    .size(50.dp)
                     .padding(5.dp)
             ) {
                 Icon(
@@ -227,11 +257,9 @@ private fun ReminderColumnItem(
             }
 
             IconButton(
-                onClick = {
-                    openDeleteConfirmation.value = true
-                },
+                onClick = { openDeleteDialog.value = true },
                 modifier = Modifier
-                    .size(55.dp)
+                    .size(50.dp)
                     .padding(5.dp)
             ) {
                 Icon(
@@ -251,12 +279,14 @@ private fun ReminderColumnItem(
     }
 
     // Dialogs that open from clicking the different icons
-    ChooseIconForm(openChooseIcon, viewModel, reminder)
-    DeleteConfirmation(openDeleteConfirmation, viewModel, reminder)
-    EditForm(openEditForm, viewModel, reminder, resultLauncher, speechText)
+    ChooseIconDialog(openChooseIconDialog, viewModel, reminder, showAll, showAllText)
+    DeleteDialog(openDeleteDialog, viewModel, reminder, showAll, showAllText)
+    EditDialog(openEditDialog, viewModel, reminder, resultLauncher, speechText, showAll, showAllText)
+    AddNotificationDialog(openNotificationDialog, viewModel, reminder)
 }
 
 
-private fun Date.formatToString(): String {
+fun Date.formatToString(): String {
     return SimpleDateFormat("kk:mm - E dd MMMM yyyy", Locale.getDefault()).format(this)
 }
+

@@ -12,6 +12,7 @@ import java.util.*
 class ReminderRepository(
     private val reminderDao: ReminderDao
 ) {
+    suspend fun getReminder(id: Long): Reminder? = reminderDao.getReminder(id)
     fun getRemindersForAccount(accountId: Long):
         Flow<List<ReminderToAccount>> = reminderDao.getRemindersForAccount(accountId)
     fun getRemindersBefore(accountId: Long, time: Date):
