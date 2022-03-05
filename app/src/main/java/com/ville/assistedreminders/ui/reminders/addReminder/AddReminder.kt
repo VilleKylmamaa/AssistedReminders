@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,36 +21,54 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.google.accompanist.insets.systemBarsPadding
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
 import com.ville.assistedreminders.data.entity.Reminder
+import com.ville.assistedreminders.ui.MainActivity
 import com.ville.assistedreminders.ui.theme.reminderIcon
+import com.ville.assistedreminders.ui.theme.reminderMessage
 import com.ville.assistedreminders.ui.theme.secondaryButtonBackground
 import com.ville.assistedreminders.util.makeLongToast
-import com.ville.assistedreminders.util.notifyNewReminder
+import com.ville.assistedreminders.util.makeShortToast
 import java.text.SimpleDateFormat
 import java.util.*
 
 
 @Composable
 fun AddReminder(
+    navController: NavController,
     viewModel: ReminderViewModel = viewModel(),
     onBackPress: () -> Unit,
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    mainActivity: MainActivity
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val message = remember { mutableStateOf("") }
+    val message = rememberSaveable { mutableStateOf("") }
     val previousSpeechText = remember { mutableStateOf("") }
-    val scheduling: Calendar = Calendar.getInstance()
-    val shownDate = remember { mutableStateOf("Date not set") }
-    val shownTime = remember { mutableStateOf("Time not set") }
-    val notifyCheckedState = remember { mutableStateOf(true) }
-
+    val scheduling = rememberSaveable { mutableStateOf(Calendar.getInstance())}
+    val shownDate = rememberSaveable { mutableStateOf("Date not set") }
+    val shownTime = rememberSaveable { mutableStateOf("Time not set") }
+    val latitude = remember { mutableStateOf(0.0) }
+    val longitude = remember { mutableStateOf(0.0) }
+    val schedulingCheckedState = rememberSaveable { mutableStateOf(false) }
+    val locationCheckedState = rememberSaveable { mutableStateOf(false) }
 
     if (speechText.value != previousSpeechText.value) {
         message.value = speechText.value.replaceFirstChar { it.uppercase() }
+    }
+
+    val location = navController
+        .currentBackStackEntry
+        ?.savedStateHandle
+        ?.getLiveData<LatLng>("location_data")
+        ?.value
+    if (location?.latitude != null) {
+        latitude.value = location.latitude
+        longitude.value = location.longitude
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -116,24 +135,22 @@ fun AddReminder(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            ScheduleNotificationField(context, scheduling, shownDate, shownTime, notifyCheckedState)
-            /*
+            ScheduleNotificationField(
+                context,
+                scheduling.value,
+                shownDate,
+                shownTime,
+                schedulingCheckedState
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { /* TODO */ },
-                enabled = false,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .size(55.dp)
-                    .padding(horizontal = 16.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(
-                    text = "Set Location",
-                    color = MaterialTheme.colors.onPrimary
-                )
-            }
-            */
+            ChooseLocationField(
+                navController,
+                latitude,
+                longitude,
+                locationCheckedState
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
@@ -141,35 +158,75 @@ fun AddReminder(
                         coroutineScope.launch {
                             val loggedInAccount = viewModel.getLoggedInAccount()
                             if (loggedInAccount != null) {
-                                val newReminder = Reminder(
-                                    message = message.value,
-                                    location_x = "65.021545",
-                                    location_y = "25.469885",
-                                    reminder_time = scheduling.time,
-                                    creation_time = Calendar.getInstance().time,
-                                    creator_id = loggedInAccount.accountId,
-                                    reminder_seen = false,
-                                    icon = "Circle"
-                                )
-                                viewModel.saveReminder(
-                                    newReminder,
-                                    scheduling,
-                                    notifyCheckedState.value
-                                )
-                                notifyNewReminder(newReminder)
-                                if (notifyCheckedState.value) {
-                                    makeLongToast(context, "New reminder will notify you on" +
-                                            " ${scheduling.time.formatTimeToString()}" +
-                                            " ${scheduling.time.formatDateToString()}")
+                                if (schedulingCheckedState.value
+                                    && (shownDate.value == "Date not set"
+                                    || shownTime.value == "Time not set")) {
+                                    makeShortToast(context, "Date or time not set")
                                 } else {
-                                    makeLongToast(context,
-                                        "New reminder without notification added")
+                                    if (locationCheckedState.value && location == null) {
+                                        makeShortToast(context, "Location not set")
+                                    } else {
+                                        val newReminder = Reminder(
+                                            message = message.value,
+                                            location_x = latitude.value,
+                                            location_y = longitude.value,
+                                            reminder_time = scheduling.value.time,
+                                            creation_time = Calendar.getInstance().time,
+                                            creator_id = loggedInAccount.accountId,
+                                            reminder_seen = false,
+                                            icon = "Circle"
+                                        )
+
+                                        viewModel.saveReminder(
+                                            newReminder,
+                                            scheduling.value,
+                                            location,
+                                            schedulingCheckedState.value,
+                                            locationCheckedState.value,
+                                            mainActivity
+                                        )
+
+                                        // Immediately notify about a new reminder
+                                        //notifyNewReminder(newReminder)
+
+                                        when {
+                                            schedulingCheckedState.value
+                                                    && locationCheckedState.value -> {
+                                                makeLongToast(
+                                                    context,
+                                                    "You will be notified when the reminder is " +
+                                                        "due AND when within 200m of the location"
+                                                )
+                                            }
+                                            schedulingCheckedState.value -> {
+                                                makeLongToast(
+                                                    context,
+                                                    "You will be notified on" +
+                                                        " ${scheduling.value.time.formatTimeToString()}" +
+                                                        " ${scheduling.value.time.formatDateToString()}"
+                                                )
+                                            }
+                                            locationCheckedState.value -> {
+                                                makeLongToast(
+                                                    context,
+                                                    "You will be notified when within 200m " +
+                                                        "of the location"
+                                                )
+                                            }
+                                            else -> {
+                                                makeLongToast(
+                                                    context,
+                                                    "New reminder without notifications created"
+                                                )
+                                            }
+                                        }
+                                        message.value = ""
+                                        speechText.value = ""
+                                        onBackPress()
+                                    }
                                 }
-                                message.value = ""
-                                speechText.value = ""
                             }
                         }
-                        onBackPress()
                     }
                 },
                 enabled = true,
@@ -298,6 +355,68 @@ private fun ScheduleNotificationField(
             onCheckedChange = { notifyCheckedState.value = it },
             modifier = Modifier.padding(horizontal = 10.dp),
             colors = CheckboxDefaults.colors(MaterialTheme.colors.secondaryButtonBackground)
+        )
+    }
+}
+
+
+@Composable
+private fun ChooseLocationField(
+    navController: NavController,
+    latitude: MutableState<Double>,
+    longitude: MutableState<Double>,
+    locationCheckedState: MutableState<Boolean>
+) {
+    var locationText = "Location not set"
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (latitude.value != 0.0 && longitude.value != 0.0) {
+            locationText = String.format("%.8f", latitude.value) + "\n" +
+                String.format("%.8f", longitude.value)
+        }
+        Text(
+            text = locationText,
+            color = MaterialTheme.colors.onSecondary,
+            modifier = Modifier.padding(horizontal = 30.dp)
+        )
+        Button(
+            onClick = { navController.navigate("map") },
+            enabled = true,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .width(135.dp)
+                .size(55.dp)
+                .padding(horizontal = 16.dp),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = MaterialTheme.colors.reminderMessage,
+                contentColor = Color.Black
+            )
+        ) {
+            Text(
+                text = "Set Location",
+                color = MaterialTheme.colors.onPrimary
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text (
+            text = "Notify me when near the location",
+            modifier = Modifier.padding(horizontal = 30.dp)
+        )
+        Checkbox(
+            checked = locationCheckedState.value,
+            onCheckedChange = { locationCheckedState.value = it },
+            modifier = Modifier.padding(horizontal = 4.dp),
+            colors = CheckboxDefaults.colors(MaterialTheme.colors.reminderMessage)
         )
     }
 }

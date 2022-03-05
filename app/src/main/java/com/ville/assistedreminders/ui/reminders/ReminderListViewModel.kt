@@ -103,8 +103,8 @@ class ReminderListViewModel(
                 val list = mutableListOf(
                     Reminder(
                         message = "Browse memes",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 65.021545,
+                        location_y = 25.469885,
                         reminder_time = resultDate1,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -113,8 +113,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Walk the dog",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate2,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -123,8 +123,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Meditate",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate3,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -133,8 +133,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Buy groceries",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate4,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -143,8 +143,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Graduate",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate5,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,

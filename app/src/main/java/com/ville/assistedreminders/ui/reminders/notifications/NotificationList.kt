@@ -37,7 +37,6 @@ fun NotificationList(
 
     val prevReminderId: MutableState<Long> = remember { mutableStateOf(0) }
     if (reminder.reminderId != prevReminderId.value) {
-        Log.d("meme", reminder.reminderId.toString())
         viewModel.updateNotificationList(reminder)
     }
     prevReminderId.value = reminder.reminderId
