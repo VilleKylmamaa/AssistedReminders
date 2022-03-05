@@ -1,12 +1,16 @@
 package com.ville.assistedreminders.data.entity.room
 
 import androidx.room.*
+import com.ville.assistedreminders.data.entity.Account
 import com.ville.assistedreminders.data.entity.Reminder
 import kotlinx.coroutines.flow.Flow
 import java.util.*
 
 @Dao
 abstract class ReminderDao {
+    @Query("SELECT * FROM reminders WHERE id = :id LIMIT 1")
+    abstract suspend fun getReminder(id: Long): Reminder?
+
     @Query("""
         SELECT reminders.* FROM reminders
         INNER JOIN accounts ON reminders.creator_id = accounts.id

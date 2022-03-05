@@ -2,7 +2,6 @@ package com.ville.assistedreminders.ui.accountSettings
 
 
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -19,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.insets.systemBarsPadding
 import com.ville.assistedreminders.Graph.accountRepository
+import com.ville.assistedreminders.util.makeShortToast
 import kotlinx.coroutines.launch
 
 @Composable
@@ -95,7 +95,7 @@ fun ChangePassword(
                             if (updateAccount != null) {
                                 updateAccount.password = newPassword.value
                                 accountRepository.updateAccount(updateAccount)
-                                makeToast(context, "Password changed")
+                                makeShortToast(context, "Password changed")
                             }
                         }
                         onBackPress()
@@ -117,21 +117,17 @@ fun ChangePassword(
     }
 }
 
-private fun makeToast(context: Context, text: String) {
-    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-}
-
 private fun isValid(password: String, repeatPassword: String, context: Context): Boolean {
     if (password.filter { !it.isWhitespace() }.length < password.length) {
-        makeToast(context, "Password can't have whitespace")
+        makeShortToast(context, "Password can't have whitespace")
         return false
     }
     if (password.length < 5) {
-        makeToast(context, "Password has to be at least 5 characters long")
+        makeShortToast(context, "Password has to be at least 5 characters long")
         return false
     }
     if (password != repeatPassword) {
-        makeToast(context, "Password and repeat password don't match")
+        makeShortToast(context, "Password and repeat password don't match")
         return false
     }
     return true

@@ -23,8 +23,8 @@ import java.util.*
 data class Reminder(
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val reminderId: Long = 0,
     @ColumnInfo(name = "message") var message: String,
-    @ColumnInfo(name = "location_x") var location_x: String,
-    @ColumnInfo(name = "location_y") var location_y: String,
+    @ColumnInfo(name = "location_x") var location_x: Double,
+    @ColumnInfo(name = "location_y") var location_y: Double,
     @ColumnInfo(name = "reminder_time") var reminder_time: Date,
     @ColumnInfo(name = "creation_time") var creation_time: Date,
     @ColumnInfo(name = "creator_id") var creator_id: Long,

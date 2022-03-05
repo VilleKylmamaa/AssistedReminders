@@ -1,4 +1,4 @@
-package com.ville.assistedreminders.ui.reminders.dialog
+package com.ville.assistedreminders.ui.reminders.reminderDialog
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -14,14 +14,17 @@ import com.google.accompanist.insets.systemBarsPadding
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.ui.reminders.ReminderListViewModel
 import com.ville.assistedreminders.ui.theme.reminderIcon
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 
 @Composable
-fun ChooseIconForm(
+fun ChooseIconDialog(
     openChooseIcon: MutableState<Boolean>,
     viewModel: ReminderListViewModel,
-    reminder: Reminder
+    reminder: Reminder,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -61,9 +64,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "Grade"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -79,9 +82,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "ReportProblem"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -97,9 +100,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "Favorite"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -115,9 +118,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "SelfImprovement"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -137,9 +140,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "DirectionsRun"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -155,9 +158,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "SportsEsports"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -173,9 +176,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "Pets"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier
@@ -191,9 +194,9 @@ fun ChooseIconForm(
                                 IconButton(
                                     onClick = {
                                         reminder.icon = "ShoppingCart"
-                                        coroutineScope.launch {
-                                            viewModel.updateReminder(reminder)
-                                        }
+                                        coroutineScope.launch { viewModel.updateReminder(reminder) }
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         openChooseIcon.value = false
                                     },
                                     modifier = Modifier

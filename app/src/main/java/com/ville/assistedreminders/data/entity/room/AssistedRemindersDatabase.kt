@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.ville.assistedreminders.data.entity.Account
 import com.ville.assistedreminders.data.entity.Converters
+import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
 
 
@@ -16,9 +17,10 @@ import com.ville.assistedreminders.data.entity.Reminder
 @Database(
     entities = [
         Reminder::class,
-        Account::class
+        Account::class,
+        Notification::class
     ],
-    version = 13,
+    version = 17,
     exportSchema = false
 )
 
@@ -26,6 +28,7 @@ import com.ville.assistedreminders.data.entity.Reminder
 abstract class AssistedRemindersDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
     abstract fun accountDao(): AccountDao
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         @Volatile

@@ -1,13 +1,17 @@
 package com.ville.assistedreminders.ui.reminders
 
+
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ville.assistedreminders.Graph
+import com.ville.assistedreminders.Graph.notificationRepository
 import com.ville.assistedreminders.data.entity.Account
+import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.repository.ReminderRepository
 import com.ville.assistedreminders.data.entity.room.ReminderToAccount
+import com.ville.assistedreminders.util.scheduleReminderNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
@@ -32,6 +36,11 @@ class ReminderListViewModel(
 
     suspend fun deleteReminder(reminder: Reminder) {
         reminderRepository.deleteReminder(reminder)
+    }
+
+    suspend fun addNotification(notification: Notification, reminder: Reminder, scheduling: Calendar) {
+        val notificationId = notificationRepository.addNotification(notification)
+        scheduleReminderNotification(notificationId, reminder, scheduling)
     }
 
     suspend fun showAllSwitch(showAll: Boolean) {
@@ -94,8 +103,8 @@ class ReminderListViewModel(
                 val list = mutableListOf(
                     Reminder(
                         message = "Browse memes",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 65.021545,
+                        location_y = 25.469885,
                         reminder_time = resultDate1,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -104,8 +113,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Walk the dog",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate2,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -114,8 +123,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Meditate",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate3,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -124,8 +133,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Buy groceries",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate4,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,
@@ -134,8 +143,8 @@ class ReminderListViewModel(
                     ),
                     Reminder(
                         message = "Graduate",
-                        location_x = "65.021545",
-                        location_y = "25.469885",
+                        location_x = 0.0,
+                        location_y = 0.0,
                         reminder_time = resultDate5,
                         creation_time = Calendar.getInstance().time,
                         creator_id = loggedInAccount.accountId,

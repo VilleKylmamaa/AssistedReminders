@@ -1,22 +1,29 @@
 package com.ville.assistedreminders.ui.reminders.addReminder
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
+import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
-import androidx.work.*
-import com.ville.assistedreminders.R
+import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofencingRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.LatLng
+import com.ville.assistedreminders.GeofenceReceiver
 import com.ville.assistedreminders.Graph
 import com.ville.assistedreminders.Graph.accountRepository
+import com.ville.assistedreminders.Graph.notificationRepository
 import com.ville.assistedreminders.data.entity.Account
+import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.repository.ReminderRepository
-import com.ville.assistedreminders.util.NotificationWorker
+import com.ville.assistedreminders.ui.MainActivity
+import com.ville.assistedreminders.ui.map.*
+import com.ville.assistedreminders.util.*
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class ReminderViewModel(
     private val reminderRepository: ReminderRepository = Graph.reminderRepository
@@ -25,96 +32,102 @@ class ReminderViewModel(
         return accountRepository.getLoggedInAccount()
     }
 
-    suspend fun saveReminder(reminder: Reminder): Long {
-        createReminderNotification(reminder)
-        return reminderRepository.addReminder(reminder)
+    suspend fun saveReminder(
+        reminder: Reminder,
+        scheduling: Calendar,
+        location: LatLng?,
+        scheduleNotification: Boolean,
+        locationNotification: Boolean,
+        mainActivity: MainActivity
+    ) {
+        // Schedule a notification in the future if notify checkbox was checked
+        // and the given time hasn't already passed
+        val newReminderId = reminderRepository.addReminder(reminder)
+        if (scheduleNotification
+            && reminder.reminder_time.time > System.currentTimeMillis()
+            && !locationNotification
+        ) {
+            val newNotificationID = notificationRepository.addNotification(
+                Notification(
+                    notificationTime = scheduling.time,
+                    reminder_id = newReminderId
+                )
+            )
+            scheduleReminderNotification(newNotificationID, reminder, scheduling)
+        }
+
+        if (locationNotification && location != null) {
+            createGeoFence(
+                newReminderId,
+                location,
+                reminder.reminder_time,
+                reminder.message,
+                mainActivity
+            )
+        }
+    }
+
+    private fun createGeoFence(
+        reminderId: Long,
+        location: LatLng,
+        reminderTime: Date,
+        reminderMessage: String,
+        mainActivity: MainActivity
+    ) {
+        val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+
+        val geofence = Geofence.Builder()
+            .setRequestId(GEOFENCE_ID)
+            .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
+            .setExpirationDuration(GEOFENCE_EXPIRATION.toLong())
+            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
+            .setLoiteringDelay(GEOFENCE_DWELL_DELAY)
+            .build()
+
+        val geofenceRequest = GeofencingRequest.Builder()
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            .addGeofence(geofence)
+            .build()
+
+        val intent = Intent(Graph.appContext, GeofenceReceiver::class.java)
+            .putExtra("reminderId", reminderId)
+            .putExtra("reminderTime", reminderTime.time)
+            .putExtra(
+                    "message", "Message: $reminderMessage" +
+                    "\n\nLatitude: ${location.latitude}" +
+                    "\nLongitude: ${location.longitude}"
+            )
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            Graph.appContext,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(
+                    Graph.appContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    mainActivity,
+                    arrayOf(
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ),
+                    GEOFENCE_LOCATION_REQUEST_CODE
+                )
+            } else {
+                geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+            }
+        } else {
+            geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+        }
     }
 
     init {
         createNotificationChannel(context = Graph.appContext)
     }
 }
-
-private fun createReminderNotification(reminder: Reminder) {
-    val notificationId = 2
-    val builder = NotificationCompat.Builder(Graph.appContext, "CHANNEL_ID")
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("New reminder added")
-        .setContentText(reminder.message)
-        .setPriority(NotificationCompat.PRIORITY_HIGH)
-    with(NotificationManagerCompat.from(Graph.appContext)) {
-        notify(notificationId, builder.build())
-    }
-}
-
-private fun setOneTimeNotification() {
-    val workManager = WorkManager.getInstance(Graph.appContext)
-    val constraints = Constraints.Builder()
-        .setRequiredNetworkType(NetworkType.CONNECTED)
-        .build()
-
-    val notificationWorker = OneTimeWorkRequestBuilder<NotificationWorker>()
-        .setInitialDelay(10, TimeUnit.SECONDS)
-        .setConstraints(constraints)
-        .build()
-
-    workManager.enqueue(notificationWorker)
-
-    //Monitoring for state of work
-    workManager.getWorkInfoByIdLiveData(notificationWorker.id)
-        .observeForever { workInfo ->
-            if (workInfo.state == WorkInfo.State.SUCCEEDED) {
-                createSuccessNotification()
-            } else {
-                createErrorNotification()
-            }
-        }
-}
-
-private fun createSuccessNotification() {
-    val notificationId = 1
-    val builder = NotificationCompat.Builder(Graph.appContext, "CHANNEL_ID")
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("Success! Download complete")
-        .setContentText("Your countdown completed successfully")
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-    with(NotificationManagerCompat.from(Graph.appContext)) {
-        //notificationId is unique for each notification that you define
-        notify(notificationId, builder.build())
-    }
-}
-
-private fun createErrorNotification() {
-    val notificationId = 1
-    val builder = NotificationCompat.Builder(Graph.appContext, "CHANNEL_ID")
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("Error")
-        .setContentText("Something went wrong!")
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-    with(NotificationManagerCompat.from(Graph.appContext)) {
-        //notificationId is unique for each notification that you define
-        notify(notificationId, builder.build())
-    }
-}
-
-private fun createNotificationChannel(context: Context) {
-    // Create the NotificationChannel, but only on API 26+ because
-    // the NotificationChannel class is new and not in the support library
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val name = "NotificationChannelName"
-        val descriptionText = "NotificationChannelDescriptionText"
-        val importance = NotificationManager.IMPORTANCE_DEFAULT
-        val channel = NotificationChannel("CHANNEL_ID", name, importance).apply {
-            description = descriptionText
-        }
-        // register the channel with the system
-        val notificationManager: NotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
-    }
-}
-
 
 data class ReminderViewState(
     val textFromSpeech: String? = null,

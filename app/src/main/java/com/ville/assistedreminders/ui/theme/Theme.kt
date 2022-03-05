@@ -22,6 +22,12 @@ val Colors.reminderMessage: Color
 val Colors.reminderIcon: Color
     get() = if (darkTheme) LightGreen else Teal500
 
+val Colors.secondaryButtonBackground: Color
+    get() = if (darkTheme) LightBlue else DarkBlue
+
+val Colors.showAllButtonBackground: Color
+    get() = if (darkTheme) LightOrange else DarkOrange
+
 @Composable
 fun AssistedRemindersTheme(
         content: @Composable () -> Unit

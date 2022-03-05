@@ -1,4 +1,4 @@
-package com.ville.assistedreminders.ui.reminders.dialog
+package com.ville.assistedreminders.ui.reminders.reminderDialog
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.AlertDialog
@@ -18,21 +18,23 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun DeleteConfirmation(
-    openDeleteConfirmation: MutableState<Boolean>,
+fun DeleteDialog(
+    openDeleteDialog: MutableState<Boolean>,
     viewModel: ReminderListViewModel,
-    reminder: Reminder
+    reminder: Reminder,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     MaterialTheme {
         Column {
-            if (openDeleteConfirmation.value) {
+            if (openDeleteDialog.value) {
                 AlertDialog(
                     onDismissRequest = {
                         // Dismiss the dialog when the user clicks outside the dialog
                         // or on the back button
-                        openDeleteConfirmation.value = false
+                        openDeleteDialog.value = false
                     },
                     title = {
                         Column(
@@ -60,7 +62,7 @@ fun DeleteConfirmation(
                                     modifier = Modifier
                                         .padding(10.dp)
                                         .width(90.dp),
-                                    onClick = { openDeleteConfirmation.value = false }
+                                    onClick = { openDeleteDialog.value = false }
                                 ) {
                                     Text("Cancel")
                                 }
@@ -69,10 +71,12 @@ fun DeleteConfirmation(
                                         .padding(10.dp)
                                         .width(90.dp),
                                     onClick = {
+                                        showAll.value = false
+                                        showAllText.value = "Show All"
                                         coroutineScope.launch {
                                             viewModel.deleteReminder(reminder)
                                         }
-                                        openDeleteConfirmation.value = false
+                                        openDeleteDialog.value = false
                                     }
                                 ) {
                                     Text("Yes")

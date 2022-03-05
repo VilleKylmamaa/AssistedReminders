@@ -1,7 +1,6 @@
 package com.ville.assistedreminders.ui.accountSettings
 
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -15,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.insets.systemBarsPadding
 import com.ville.assistedreminders.Graph.accountRepository
+import com.ville.assistedreminders.util.makeShortToast
 import kotlinx.coroutines.launch
 
 @Composable
@@ -73,12 +73,12 @@ fun ChangeUsername(
                                 val newUsernameString = newUsername.value
                                 updateAccount.username = newUsernameString
                                 accountRepository.updateAccount(updateAccount)
-                                makeToast(context, "New username: $newUsernameString")
+                                makeShortToast(context, "New username: $newUsernameString")
                             }
                         }
                         onBackPress()
                     } else {
-                        makeToast(context, "Username has to be at least 5 characters long")
+                        makeShortToast(context, "Username has to be at least 5 characters long")
                     }
                 },
                 enabled = true,
@@ -97,18 +97,13 @@ fun ChangeUsername(
     }
 }
 
-
-private fun makeToast(context: Context, text: String) {
-    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-}
-
 private fun isValid(username: String, context: Context): Boolean {
     if (username.filter { !it.isWhitespace() }.length < username.length) {
-        makeToast(context, "Username can't have whitespace")
+        makeShortToast(context, "Username can't have whitespace")
         return false
     }
     if (username.length < 5) {
-        makeToast(context, "Username has to be at least 5 characters long")
+        makeShortToast(context, "Username has to be at least 5 characters long")
         return false
     }
     return true
