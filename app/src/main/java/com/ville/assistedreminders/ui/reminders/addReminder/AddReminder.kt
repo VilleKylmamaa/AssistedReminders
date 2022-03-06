@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.accompanist.insets.systemBarsPadding
+import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
 import com.ville.assistedreminders.data.entity.Reminder
@@ -43,7 +44,8 @@ fun AddReminder(
     onBackPress: () -> Unit,
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
-    mainActivity: MainActivity
+    mainActivity: MainActivity,
+    //geofencingClient: GeofencingClient
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -183,7 +185,8 @@ fun AddReminder(
                                             location,
                                             schedulingCheckedState.value,
                                             locationCheckedState.value,
-                                            mainActivity
+                                            mainActivity,
+                                            //geofencingClient
                                         )
 
                                         // Immediately notify about a new reminder
