@@ -30,7 +30,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var geofencingClient: GeofencingClient
     private var currentLocation: Location? = null
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val speechText: MutableState<String> = mutableStateOf("")

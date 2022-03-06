@@ -1,8 +1,11 @@
 package com.ville.assistedreminders.ui.map
 
 import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +20,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -24,6 +29,7 @@ import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.ktx.awaitMap
+import com.ville.assistedreminders.GeofenceReceiver
 import com.ville.assistedreminders.Graph
 import com.ville.assistedreminders.ui.MainActivity
 import com.ville.assistedreminders.util.makeLongToast
@@ -106,7 +112,8 @@ fun ReminderLocationMap(
 
                 setMapLongClick(
                     map = map,
-                    navController = navController
+                    navController = navController,
+                    mainActivity = mainActivity
                 )
             }
         }
@@ -115,7 +122,8 @@ fun ReminderLocationMap(
 
 private fun setMapLongClick(
     map: GoogleMap,
-    navController: NavController
+    navController: NavController,
+    mainActivity: MainActivity
 ) {
     map.setOnMapLongClickListener { latitudeLongitude ->
         map.clear()
@@ -145,9 +153,68 @@ private fun setMapLongClick(
                 .strokeColor(Color(0xA65A5A5A).toArgb())
                 .fillColor(Color(0x6680FFE6).toArgb())
         )
+
+        createGeoFence(latitudeLongitude, mainActivity)
     }
 }
 
+
+private fun createGeoFence(
+    location: LatLng,
+    mainActivity: MainActivity
+) {
+    val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+
+    val geofence = Geofence.Builder()
+        .setRequestId(GEOFENCE_ID)
+        .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
+        .setExpirationDuration(Geofence.NEVER_EXPIRE)
+        .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
+        .setLoiteringDelay(GEOFENCE_DWELL_DELAY)
+        .build()
+
+    val geofenceRequest = GeofencingRequest.Builder()
+        .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
+        .addGeofence(geofence)
+        .build()
+
+    val intent = Intent(Graph.appContext, GeofenceReceiver::class.java)
+        .putExtra("reminderId", "reminderId")
+        .putExtra("reminderTime", "reminderTime")
+        .putExtra(
+            "message", "\n\nLatitude: ${location.latitude}" +
+                    "\nLongitude: ${location.longitude}"
+        )
+
+    val pendingIntent = PendingIntent.getBroadcast(
+        Graph.appContext,
+        0,
+        intent,
+        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (ContextCompat.checkSelfPermission(
+                Graph.appContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                mainActivity,
+                arrayOf(
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ),
+                GEOFENCE_LOCATION_REQUEST_CODE
+            )
+        } else {
+            geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+                .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
+                .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+        }
+    } else {
+        geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+            .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
+            .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+    }
+}
 
 private fun isLocationPermissionGranted() : Boolean {
     return ContextCompat.checkSelfPermission(

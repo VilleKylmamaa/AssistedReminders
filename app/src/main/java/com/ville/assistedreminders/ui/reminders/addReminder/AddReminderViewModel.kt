@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -79,13 +80,13 @@ class ReminderViewModel(
         val geofence = Geofence.Builder()
             .setRequestId(GEOFENCE_ID)
             .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
-            .setExpirationDuration(GEOFENCE_EXPIRATION.toLong())
+            .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
             .setLoiteringDelay(GEOFENCE_DWELL_DELAY)
             .build()
 
         val geofenceRequest = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
             .addGeofence(geofence)
             .build()
 
@@ -102,7 +103,7 @@ class ReminderViewModel(
             Graph.appContext,
             0,
             intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -118,9 +119,13 @@ class ReminderViewModel(
                 )
             } else {
                 geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+                    .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
+                    .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
             }
         } else {
             geofencingClient.addGeofences(geofenceRequest, pendingIntent)
+                .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
+                .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
         }
     }
 
