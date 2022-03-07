@@ -22,8 +22,8 @@ fun AssistedReminders(
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
     mainActivity: MainActivity,
-    //geofencingClient: GeofencingClient,
-    //fusedLocationClient: FusedLocationProviderClient
+    geofencingClient: GeofencingClient,
+    fusedLocationClient: FusedLocationProviderClient
 ){
     NavHost(
         navController = appState.navController,
@@ -56,7 +56,7 @@ fun AssistedReminders(
                 resultLauncher = resultLauncher,
                 speechText = speechText,
                 mainActivity = mainActivity,
-                //geofencingClient = geofencingClient
+                geofencingClient = geofencingClient
             )
         }
 
@@ -64,8 +64,8 @@ fun AssistedReminders(
             ReminderLocationMap(
                 mainActivity = mainActivity,
                 navController = appState.navController,
-                //fusedLocationClient = fusedLocationClient,
-                //geofencingClient = geofencingClient
+                fusedLocationClient = fusedLocationClient,
+                geofencingClient = geofencingClient
             )
         }
     }

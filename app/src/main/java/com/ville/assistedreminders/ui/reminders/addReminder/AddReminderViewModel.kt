@@ -10,6 +10,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
@@ -39,7 +40,8 @@ class ReminderViewModel(
         location: LatLng?,
         scheduleNotification: Boolean,
         locationNotification: Boolean,
-        mainActivity: MainActivity
+        mainActivity: MainActivity,
+        geofencingClient: GeofencingClient
     ) {
         // Schedule a notification in the future if notify checkbox was checked
         // and the given time hasn't already passed
@@ -63,7 +65,8 @@ class ReminderViewModel(
                 location,
                 reminder.reminder_time,
                 reminder.message,
-                mainActivity
+                mainActivity,
+                geofencingClient
             )
         }
     }
@@ -73,12 +76,14 @@ class ReminderViewModel(
         location: LatLng,
         reminderTime: Date,
         reminderMessage: String,
-        mainActivity: MainActivity
+        mainActivity: MainActivity,
+        geofencingClient: GeofencingClient
     ) {
-        val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+        //val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+        geofenceId += 1
 
         val geofence = Geofence.Builder()
-            .setRequestId(GEOFENCE_ID)
+            .setRequestId(geofenceId.toString())
             .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
@@ -90,7 +95,7 @@ class ReminderViewModel(
             .addGeofence(geofence)
             .build()
 
-        val intent = Intent(Graph.appContext, GeofenceReceiver::class.java)
+        val intent = Intent(mainActivity, GeofenceReceiver::class.java)
             .putExtra("reminderId", reminderId)
             .putExtra("reminderTime", reminderTime.time)
             .putExtra(
@@ -100,7 +105,7 @@ class ReminderViewModel(
             )
 
         val pendingIntent = PendingIntent.getBroadcast(
-            Graph.appContext,
+            mainActivity,
             0,
             intent,
             PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT

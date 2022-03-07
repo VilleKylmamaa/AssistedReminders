@@ -104,7 +104,9 @@ class MainActivity : ComponentActivity() {
                         AssistedReminders(
                             mainActivity = mainActivity,
                             resultLauncher = resultLauncher,
-                            speechText = speechText
+                            speechText = speechText,
+                            fusedLocationClient = fusedLocationClient,
+                            geofencingClient = geofencingClient
                         )
                     }
                 }

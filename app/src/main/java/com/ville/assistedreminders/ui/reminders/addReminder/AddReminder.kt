@@ -45,7 +45,7 @@ fun AddReminder(
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
     mainActivity: MainActivity,
-    //geofencingClient: GeofencingClient
+    geofencingClient: GeofencingClient
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -186,7 +186,7 @@ fun AddReminder(
                                             schedulingCheckedState.value,
                                             locationCheckedState.value,
                                             mainActivity,
-                                            //geofencingClient
+                                            geofencingClient
                                         )
 
                                         // Immediately notify about a new reminder

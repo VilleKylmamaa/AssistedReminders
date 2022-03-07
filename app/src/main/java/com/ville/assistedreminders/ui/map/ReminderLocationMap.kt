@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.background
@@ -20,9 +21,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.google.android.gms.location.Geofence
-import com.google.android.gms.location.GeofencingRequest
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.CircleOptions
@@ -31,16 +30,24 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.ktx.awaitMap
 import com.ville.assistedreminders.GeofenceReceiver
 import com.ville.assistedreminders.Graph
+import com.ville.assistedreminders.Graph.accountRepository
+import com.ville.assistedreminders.Graph.reminderRepository
 import com.ville.assistedreminders.ui.MainActivity
 import com.ville.assistedreminders.util.makeLongToast
 import com.ville.assistedreminders.util.rememberMapViewWithLifecycle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.*
+
+var geofenceId = 5555
 
 @Composable
 fun ReminderLocationMap(
     navController: NavController,
-    mainActivity: MainActivity
+    mainActivity: MainActivity,
+    fusedLocationClient: FusedLocationProviderClient,
+    geofencingClient: GeofencingClient
 ) {
     val mapView = rememberMapViewWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -54,7 +61,7 @@ fun ReminderLocationMap(
         AndroidView({mapView}) { mapView ->
             coroutineScope.launch {
                 val map = mapView.awaitMap()
-                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
+                //val fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
                 map.uiSettings.isZoomControlsEnabled = true
 
                 if (!isLocationPermissionGranted()) {
@@ -110,20 +117,78 @@ fun ReminderLocationMap(
                     }
                 }
 
-                setMapLongClick(
-                    map = map,
-                    navController = navController,
-                    mainActivity = mainActivity
-                )
+                setMapShortClick(map, coroutineScope)
+                setMapLongClick(map, navController, mainActivity, geofencingClient)
             }
         }
+    }
+}
+
+private fun setMapShortClick(
+    map: GoogleMap,
+    coroutineScope: CoroutineScope
+) {
+    map.setOnMapClickListener { latLng ->
+        map.clear()
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, CAMERA_ZOOM_LEVEL))
+        coroutineScope.launch {
+            val loggedInAccount = accountRepository.getLoggedInAccount()
+            if (loggedInAccount != null) {
+                reminderRepository.getRemindersForAccount(loggedInAccount.accountId)
+                    .collect { reminderList ->
+                        for (item in reminderList) {
+                            val reminderLatitude = item.reminder.location_x
+                            val reminderLongitude = item.reminder.location_y
+                            if (reminderLatitude != 0.0) {
+                                val results = FloatArray(1)
+                                Location.distanceBetween(
+                                    latLng.latitude, latLng.longitude,
+                                    reminderLatitude, reminderLongitude,
+                                    results
+                                )
+                                val distance = results[0]
+
+                                if (distance < 1200){
+                                    val snippet = String.format(
+                                        Locale.getDefault(),
+                                        "Lat: %1$.2f, Lng: %2$.2f",
+                                        reminderLatitude,
+                                        reminderLongitude
+                                    )
+
+                                    val reminderLatLng = LatLng(reminderLatitude, reminderLatitude)
+
+                                    Log.d("memeDis", reminderLatLng.toString())
+                                    Log.d("memeDisLtLng", latLng.toString())
+                                    map.addMarker(
+                                        MarkerOptions()
+                                            .position(reminderLatLng)
+                                            .title("Reminder location")
+                                            .snippet(snippet)
+                                    )?.showInfoWindow()
+
+                                    map.addCircle(
+                                        CircleOptions()
+                                            .center(reminderLatLng)
+                                            .radius(GEOFENCE_RADIUS.toDouble())
+                                            .strokeColor(Color(0xA65A5A5A).toArgb())
+                                            .fillColor(Color(0x6680FFE6).toArgb())
+                                    )
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+
     }
 }
 
 private fun setMapLongClick(
     map: GoogleMap,
     navController: NavController,
-    mainActivity: MainActivity
+    mainActivity: MainActivity,
+    geofencingClient: GeofencingClient
 ) {
     map.setOnMapLongClickListener { latitudeLongitude ->
         map.clear()
@@ -154,19 +219,23 @@ private fun setMapLongClick(
                 .fillColor(Color(0x6680FFE6).toArgb())
         )
 
-        createGeoFence(latitudeLongitude, mainActivity)
+        createGeoFence(latitudeLongitude, mainActivity, geofencingClient)
     }
 }
 
 
 private fun createGeoFence(
     location: LatLng,
-    mainActivity: MainActivity
+    mainActivity: MainActivity,
+    geofencingClient: GeofencingClient
 ) {
-    val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+    //val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
+
+    geofenceId += 1
+    Log.d("memeGeoId", geofenceId.toString())
 
     val geofence = Geofence.Builder()
-        .setRequestId(GEOFENCE_ID)
+        .setRequestId(geofenceId.toString())
         .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
         .setExpirationDuration(Geofence.NEVER_EXPIRE)
         .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
@@ -174,23 +243,22 @@ private fun createGeoFence(
         .build()
 
     val geofenceRequest = GeofencingRequest.Builder()
-        .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
+        .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
         .addGeofence(geofence)
         .build()
 
-    val intent = Intent(Graph.appContext, GeofenceReceiver::class.java)
+    val intent = Intent(mainActivity, GeofenceReceiver::class.java)
         .putExtra("reminderId", "reminderId")
         .putExtra("reminderTime", "reminderTime")
-        .putExtra(
-            "message", "\n\nLatitude: ${location.latitude}" +
+        .putExtra("message", "Latitude: ${location.latitude}" +
                     "\nLongitude: ${location.longitude}"
         )
 
     val pendingIntent = PendingIntent.getBroadcast(
-        Graph.appContext,
+        mainActivity,
         0,
         intent,
-        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
