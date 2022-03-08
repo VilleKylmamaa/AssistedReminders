@@ -20,7 +20,7 @@ import com.ville.assistedreminders.data.entity.Reminder
         Account::class,
         Notification::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 

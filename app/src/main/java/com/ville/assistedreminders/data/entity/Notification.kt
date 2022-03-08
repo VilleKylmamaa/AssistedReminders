@@ -23,5 +23,7 @@ import java.util.*
 data class Notification(
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val notificationId: Long = 0,
     @ColumnInfo(name = "notificationTime") var notificationTime: Date,
+    @ColumnInfo(name = "notificationLatitude") var notificationLatitude: Double = 0.0,
+    @ColumnInfo(name = "notificationLongitude") var notificationLongitude: Double = 0.0,
     @ColumnInfo(name = "reminder_id") var reminder_id: Long,
 )
