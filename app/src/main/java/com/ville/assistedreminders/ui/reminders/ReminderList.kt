@@ -19,6 +19,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.room.ReminderToAccount
 import com.ville.assistedreminders.ui.reminders.reminderDialog.AddNotificationDialog
@@ -35,7 +36,8 @@ import java.util.*
 @Composable
 fun ReminderList(
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    navController: NavController
 ) {
     val viewModel: ReminderListViewModel = viewModel(
         factory = viewModelProviderFactoryOf { ReminderListViewModel() }
@@ -51,10 +53,16 @@ fun ReminderList(
             resultLauncher = resultLauncher,
             speechText = speechText,
             showAll = showAll,
-            showAllText = showAllText
+            showAllText = showAllText,
+            navController = navController
         )
     }
-    ShowAllButton(viewModel, showAll, showAllText)
+
+    Spacer(modifier = Modifier.height(24.dp))
+    Row {
+        ShowAllButton(viewModel, showAll, showAllText)
+        OpenMapButton(navController)
+    }
 }
 
 @Composable
@@ -64,7 +72,8 @@ private fun ReminderColumn(
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
     showAll: MutableState<Boolean>,
-    showAllText: MutableState<String>
+    showAllText: MutableState<String>,
+    navController: NavController
 ) {
     LazyColumn(
         contentPadding = PaddingValues(0.dp),
@@ -78,49 +87,10 @@ private fun ReminderColumn(
                 resultLauncher = resultLauncher,
                 speechText = speechText,
                 showAll = showAll,
-                showAllText = showAllText
+                showAllText = showAllText,
+                navController = navController
             )
         }
-    }
-}
-
-@Composable
-private fun ShowAllButton(
-    viewModel: ReminderListViewModel,
-    showAll: MutableState<Boolean>,
-    showAllText: MutableState<String>
-) {
-    val coroutineScope = rememberCoroutineScope()
-
-    Spacer(modifier = Modifier.height(24.dp))
-    // Button to show all reminders
-    Button(
-    onClick = {
-        showAll.value = !showAll.value
-        if (showAll.value) {
-            showAllText.value = "Hide"
-        } else {
-            showAllText.value = "Show All"
-        }
-        coroutineScope.launch {
-            viewModel.showAllSwitch(showAll.value)
-        }
-    },
-    enabled = true,
-    colors = ButtonDefaults.buttonColors(
-        backgroundColor = MaterialTheme.colors.showAllButtonBackground,
-        contentColor = Color.Black
-    ),
-    modifier = Modifier
-        .width(130.dp)
-        .size(45.dp)
-        .padding(horizontal = 16.dp),
-    shape = MaterialTheme.shapes.medium
-    ) {
-        Text(
-            text = showAllText.value,
-            color = MaterialTheme.colors.onPrimary
-        )
     }
 }
 
@@ -132,7 +102,8 @@ private fun ReminderColumnItem(
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
     showAll: MutableState<Boolean>,
-    showAllText: MutableState<String>
+    showAllText: MutableState<String>,
+    navController: NavController
 ) {
     val openChooseIconDialog = remember { mutableStateOf(false) }
     val openDeleteDialog = remember { mutableStateOf(false) }
@@ -282,9 +253,73 @@ private fun ReminderColumnItem(
     ChooseIconDialog(openChooseIconDialog, viewModel, reminder, showAll, showAllText)
     DeleteDialog(openDeleteDialog, viewModel, reminder, showAll, showAllText)
     EditDialog(openEditDialog, viewModel, reminder, resultLauncher, speechText, showAll, showAllText)
-    AddNotificationDialog(openNotificationDialog, viewModel, reminder)
+    AddNotificationDialog(openNotificationDialog, viewModel, reminder, navController)
 }
 
+@Composable
+private fun ShowAllButton(
+    viewModel: ReminderListViewModel,
+    showAll: MutableState<Boolean>,
+    showAllText: MutableState<String>
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Spacer(modifier = Modifier.height(24.dp))
+    // Button to show all reminders
+    Button(
+        onClick = {
+            showAll.value = !showAll.value
+            if (showAll.value) {
+                showAllText.value = "Hide"
+            } else {
+                showAllText.value = "Show All"
+            }
+            coroutineScope.launch {
+                viewModel.showAllSwitch(showAll.value)
+            }
+        },
+        enabled = true,
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colors.showAllButtonBackground,
+            contentColor = Color.Black
+        ),
+        modifier = Modifier
+            .width(130.dp)
+            .size(45.dp)
+            .padding(horizontal = 14.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = showAllText.value,
+            color = MaterialTheme.colors.onPrimary
+        )
+    }
+}
+
+@Composable
+private fun OpenMapButton(
+    navController: NavController
+) {
+    Spacer(modifier = Modifier.height(24.dp))
+    Button(
+        onClick = { navController.navigate(route = "map") },
+        enabled = true,
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color(0xFF9DFFB9),
+            contentColor = Color.Black
+        ),
+        modifier = Modifier
+            .width(140.dp)
+            .size(45.dp)
+            .padding(horizontal = 14.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = "Open Map",
+            color = MaterialTheme.colors.onPrimary
+        )
+    }
+}
 
 fun Date.formatToString(): String {
     return SimpleDateFormat("kk:mm - E dd MMMM yyyy", Locale.getDefault()).format(this)

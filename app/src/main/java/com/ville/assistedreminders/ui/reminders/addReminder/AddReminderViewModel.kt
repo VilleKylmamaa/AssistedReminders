@@ -12,7 +12,6 @@ import androidx.lifecycle.ViewModel
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import com.ville.assistedreminders.GeofenceReceiver
 import com.ville.assistedreminders.Graph
@@ -43,9 +42,11 @@ class ReminderViewModel(
         mainActivity: MainActivity,
         geofencingClient: GeofencingClient
     ) {
-        // Schedule a notification in the future if notify checkbox was checked
-        // and the given time hasn't already passed
+        // Save new reminder and get its id
         val newReminderId = reminderRepository.addReminder(reminder)
+
+        // Schedule a notification if notify checkbox was checked
+        // and the given time hasn't already passed
         if (scheduleNotification
             && reminder.reminder_time.time > System.currentTimeMillis()
             && !locationNotification
@@ -59,7 +60,18 @@ class ReminderViewModel(
             scheduleReminderNotification(newNotificationID, reminder, scheduling)
         }
 
+        // Set up a geofence if the location was given and the location
+        // checkbox was checked
         if (locationNotification && location != null) {
+            notificationRepository.addNotification(
+                Notification(
+                    notificationTime = scheduling.time,
+                    notificationLatitude = location.latitude,
+                    notificationLongitude = location.longitude,
+                    reminder_id = newReminderId
+                )
+            )
+
             createGeoFence(
                 newReminderId,
                 location,
@@ -79,11 +91,8 @@ class ReminderViewModel(
         mainActivity: MainActivity,
         geofencingClient: GeofencingClient
     ) {
-        //val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
-        geofenceId += 1
-
         val geofence = Geofence.Builder()
-            .setRequestId(geofenceId.toString())
+            .setRequestId(reminderId.toString())
             .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
@@ -95,7 +104,7 @@ class ReminderViewModel(
             .addGeofence(geofence)
             .build()
 
-        val intent = Intent(mainActivity, GeofenceReceiver::class.java)
+        val geofenceIntent = Intent(mainActivity, GeofenceReceiver::class.java)
             .putExtra("reminderId", reminderId)
             .putExtra("reminderTime", reminderTime.time)
             .putExtra(
@@ -104,10 +113,10 @@ class ReminderViewModel(
                     "\nLongitude: ${location.longitude}"
             )
 
-        val pendingIntent = PendingIntent.getBroadcast(
+        val geofencePendingIntent = PendingIntent.getBroadcast(
             mainActivity,
             0,
-            intent,
+            geofenceIntent,
             PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -123,14 +132,18 @@ class ReminderViewModel(
                     GEOFENCE_LOCATION_REQUEST_CODE
                 )
             } else {
-                geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-                    .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
-                    .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+                geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)
+                    .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
+                            "with id $reminderId added") }
+                    .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
+                            "Geofence NOT added") }
             }
         } else {
-            geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-                .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
-                .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+            geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)
+                .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
+                        "with id $reminderId added") }
+                .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
+                        "Geofence NOT added") }
         }
     }
 
@@ -139,6 +152,8 @@ class ReminderViewModel(
     }
 }
 
+/*
 data class ReminderViewState(
     val textFromSpeech: String? = null,
 )
+*/

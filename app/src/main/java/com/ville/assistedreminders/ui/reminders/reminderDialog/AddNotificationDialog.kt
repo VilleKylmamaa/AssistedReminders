@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.google.accompanist.insets.systemBarsPadding
 import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
@@ -28,7 +29,8 @@ import java.util.*
 fun AddNotificationDialog(
     openNotificationDialog: MutableState<Boolean>,
     viewModel: ReminderListViewModel,
-    reminder: Reminder
+    reminder: Reminder,
+    navController: NavController
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -158,7 +160,7 @@ fun AddNotificationDialog(
                                     text = "Scheduled Notifications"
                                 )
                             }
-                            NotificationList(reminder)
+                            NotificationList(reminder, navController)
                         }
                     },
                     buttons = {

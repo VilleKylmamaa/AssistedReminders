@@ -40,7 +40,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.*
 
-var geofenceId = 5555
+var geofenceId = 0
 
 @Composable
 fun ReminderLocationMap(
@@ -128,27 +128,30 @@ private fun setMapShortClick(
     map: GoogleMap,
     coroutineScope: CoroutineScope
 ) {
-    map.setOnMapClickListener { latLng ->
+    map.setOnMapClickListener { clickedLocation ->
         map.clear()
-        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, CAMERA_ZOOM_LEVEL))
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLocation, CAMERA_ZOOM_LEVEL))
+
         coroutineScope.launch {
             val loggedInAccount = accountRepository.getLoggedInAccount()
             if (loggedInAccount != null) {
                 reminderRepository.getRemindersForAccount(loggedInAccount.accountId)
                     .collect { reminderList ->
                         for (item in reminderList) {
-                            val reminderLatitude = item.reminder.location_x
-                            val reminderLongitude = item.reminder.location_y
+                            val reminder = item.reminder
+                            val reminderLatitude = reminder.location_x
+                            val reminderLongitude = reminder.location_y
                             if (reminderLatitude != 0.0) {
                                 val results = FloatArray(1)
                                 Location.distanceBetween(
-                                    latLng.latitude, latLng.longitude,
+                                    clickedLocation.latitude, clickedLocation.longitude,
                                     reminderLatitude, reminderLongitude,
                                     results
                                 )
                                 val distance = results[0]
 
-                                if (distance < 1200){
+                                // Show reminders within 1km radius
+                                if (distance < 1000){
                                     val snippet = String.format(
                                         Locale.getDefault(),
                                         "Lat: %1$.2f, Lng: %2$.2f",
@@ -156,23 +159,21 @@ private fun setMapShortClick(
                                         reminderLongitude
                                     )
 
-                                    val reminderLatLng = LatLng(reminderLatitude, reminderLatitude)
+                                    val reminderLatLng = LatLng(reminderLatitude, reminderLongitude)
 
-                                    Log.d("memeDis", reminderLatLng.toString())
-                                    Log.d("memeDisLtLng", latLng.toString())
                                     map.addMarker(
                                         MarkerOptions()
                                             .position(reminderLatLng)
-                                            .title("Reminder location")
+                                            .title(reminder.message)
                                             .snippet(snippet)
-                                    )?.showInfoWindow()
+                                    )
 
                                     map.addCircle(
                                         CircleOptions()
                                             .center(reminderLatLng)
                                             .radius(GEOFENCE_RADIUS.toDouble())
                                             .strokeColor(Color(0xA65A5A5A).toArgb())
-                                            .fillColor(Color(0x6680FFE6).toArgb())
+                                            .fillColor(Color(0x59FF9BE6).toArgb())
                                     )
                                 }
                             }
@@ -190,36 +191,37 @@ private fun setMapLongClick(
     mainActivity: MainActivity,
     geofencingClient: GeofencingClient
 ) {
-    map.setOnMapLongClickListener { latitudeLongitude ->
+    map.setOnMapLongClickListener { clickedLocation ->
         map.clear()
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(clickedLocation, CAMERA_ZOOM_LEVEL))
 
         val snippet = String.format(
             Locale.getDefault(),
             "Lat: %1$.2f, Lng: %2$.2f",
-            latitudeLongitude.latitude,
-            latitudeLongitude.longitude
+            clickedLocation.latitude,
+            clickedLocation.longitude
         )
 
         map.addMarker(
             MarkerOptions()
-                .position(latitudeLongitude)
-                .title("Reminder location")
+                .position(clickedLocation)
+                .title("Set reminder here")
                 .snippet(snippet)
-        ).apply {
+        )?.showInfoWindow().apply {
             navController.previousBackStackEntry
                 ?.savedStateHandle
-                ?.set("location_data", latitudeLongitude)
+                ?.set("location_data", clickedLocation)
         }
 
         map.addCircle(
             CircleOptions()
-                .center(latitudeLongitude)
+                .center(clickedLocation)
                 .radius(GEOFENCE_RADIUS.toDouble())
                 .strokeColor(Color(0xA65A5A5A).toArgb())
                 .fillColor(Color(0x6680FFE6).toArgb())
         )
 
-        createGeoFence(latitudeLongitude, mainActivity, geofencingClient)
+        createGeoFence(clickedLocation, mainActivity, geofencingClient)
     }
 }
 
@@ -229,10 +231,7 @@ private fun createGeoFence(
     mainActivity: MainActivity,
     geofencingClient: GeofencingClient
 ) {
-    //val geofencingClient = LocationServices.getGeofencingClient(mainActivity)
-
     geofenceId += 1
-    Log.d("memeGeoId", geofenceId.toString())
 
     val geofence = Geofence.Builder()
         .setRequestId(geofenceId.toString())
@@ -248,17 +247,16 @@ private fun createGeoFence(
         .build()
 
     val intent = Intent(mainActivity, GeofenceReceiver::class.java)
-        .putExtra("reminderId", "reminderId")
-        .putExtra("reminderTime", "reminderTime")
+        .putExtra("reminderId", geofenceId)
+        .putExtra("reminderTime", 0.toLong())
         .putExtra("message", "Latitude: ${location.latitude}" +
-                    "\nLongitude: ${location.longitude}"
-        )
+                    "\nLongitude: ${location.longitude}")
 
     val pendingIntent = PendingIntent.getBroadcast(
         mainActivity,
         0,
         intent,
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -274,13 +272,17 @@ private fun createGeoFence(
             )
         } else {
             geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-                .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
-                .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+                .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
+                        "with id $geofenceId added") }
+                .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
+                        "Geofence NOT added") }
         }
     } else {
         geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-            .addOnSuccessListener { Log.d("memeGeo", "onSuccess: Geofence added") }
-            .addOnFailureListener { Log.d("memeGeo", "onFailure: Geofence not added") }
+            .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
+                    "with id $geofenceId added") }
+            .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
+                    "Geofence NOT added") }
     }
 }
 

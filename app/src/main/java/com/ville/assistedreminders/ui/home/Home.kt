@@ -73,7 +73,7 @@ fun HomeContent(
             .fillMaxWidth()
         ) {
             HomeAppBar(navController, viewModel)
-            ReminderList(resultLauncher, speechText)
+            ReminderList(resultLauncher, speechText, navController)
         }
     }
 }

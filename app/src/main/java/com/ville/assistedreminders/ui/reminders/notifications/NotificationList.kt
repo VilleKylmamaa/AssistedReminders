@@ -16,6 +16,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ville.assistedreminders.data.entity.Notification
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.room.NotificationToReminder
@@ -28,7 +29,8 @@ import java.util.*
 
 @Composable
 fun NotificationList(
-    reminder: Reminder
+    reminder: Reminder,
+    navController: NavController
 ) {
     val viewModel: NotificationListViewModel = viewModel(
         factory = viewModelProviderFactoryOf { NotificationListViewModel(reminder = reminder) }
@@ -44,7 +46,8 @@ fun NotificationList(
     Column {
         NotificationColumn(
             list = viewState.notificationsForReminder,
-            viewModel = viewModel
+            viewModel = viewModel,
+            navController = navController
         )
     }
 }
@@ -52,7 +55,8 @@ fun NotificationList(
 @Composable
 private fun NotificationColumn(
     list: MutableLiveData<List<NotificationToReminder>>,
-    viewModel: NotificationListViewModel
+    viewModel: NotificationListViewModel,
+    navController: NavController
 ) {
     LazyColumn(
         contentPadding = PaddingValues(0.dp),
@@ -62,7 +66,8 @@ private fun NotificationColumn(
             NotificationColumnItem(
                 notification = item.notification,
                 modifier = Modifier.fillParentMaxWidth(),
-                viewModel = viewModel
+                viewModel = viewModel,
+                navController = navController
             )
         }
     }
@@ -72,7 +77,8 @@ private fun NotificationColumn(
 private fun NotificationColumnItem(
     notification: Notification,
     modifier: Modifier = Modifier,
-    viewModel: NotificationListViewModel
+    viewModel: NotificationListViewModel,
+    navController: NavController
 ) {
     ConstraintLayout(modifier = modifier) {
         val (notificationTime, iconRow, divider) = createRefs()
@@ -105,18 +111,19 @@ private fun NotificationColumnItem(
                     end.linkTo(parent.end)
                 }
         ) {
-            /*IconButton(
-                onClick = { /* TODO */ },
-                enabled = false,
-                modifier = Modifier
-                    .size(40.dp)
-                    .padding(5.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = "Edit"
-                )
-            }*/
+            if (notification.notificationLatitude != 0.0) {
+                IconButton(
+                    onClick = { navController.navigate(route = "map") },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .padding(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "Location"
+                    )
+                }
+            }
 
             IconButton(
                 onClick = {

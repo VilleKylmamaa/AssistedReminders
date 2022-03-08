@@ -13,7 +13,7 @@ import com.ville.assistedreminders.util.createGeoFenceNotification
 
 class GeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
-        Log.d("meme1", "looking for geofence")
+        Log.d("geofenceLooking", "Looking for geofences")
         if (context != null && intent != null) {
             val geofencingEvent = GeofencingEvent.fromIntent(intent)
 
@@ -26,7 +26,7 @@ class GeofenceReceiver : BroadcastReceiver() {
 
             // Get the transition type.
             val geofenceTransition = geofencingEvent.geofenceTransition
-            Log.d("memeTrans", "$geofenceTransition")
+            Log.d("geofenceTransition", "Transition type: $geofenceTransition")
 
             // Test that the reported transition was of interest.
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER
@@ -35,16 +35,16 @@ class GeofenceReceiver : BroadcastReceiver() {
                 val triggeringGeoFences = geofencingEvent.triggeringGeofences
                 val message = intent.getStringExtra("message")
                 val reminderTime = intent.getLongExtra("reminderTime", 0)
-                Log.d("meme2", "TRIGGERED: $reminderTime")
+                Log.d("geofenceTriggered", "Message: $message, time: $reminderTime")
 
                 // Notify if the time set for the reminder has been passed
                 if (System.currentTimeMillis() > reminderTime) {
-                    Log.d("meme3", "NOTIFY")
-                    createGeoFenceNotification(context.applicationContext,"$message")
+                    Log.d("geofenceNotify", "Geofence notification sent")
+                    createGeoFenceNotification(context.applicationContext, "$message")
                     MainActivity.removeGeoFences(context, triggeringGeoFences)
                 }
             } else {
-                Log.e("GeofenceReceiver", "Invalid type transition $geofenceTransition")
+                Log.e("geofenceReceiver", "Invalid type transition $geofenceTransition")
             }
         }
     }
