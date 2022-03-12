@@ -1,6 +1,7 @@
 package com.ville.assistedreminders.ui.home
 
 import android.content.Intent
+import android.location.Location
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.background
@@ -22,6 +23,8 @@ import com.ville.assistedreminders.ui.reminders.ReminderList
 import com.ville.assistedreminders.ui.theme.ThemeState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.ville.assistedreminders.ui.MainActivity
 import kotlinx.coroutines.launch
 
 @Composable
@@ -29,7 +32,9 @@ fun Home(
     viewModel: HomeViewModel = viewModel(),
     navController: NavController,
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    mainActivity: MainActivity,
+    currentLocation: MutableState<Location?>
 ) {
     // Stops back button from going back to login screen
     BackHandler(true) { /* Do nothing */ }
@@ -39,7 +44,9 @@ fun Home(
             navController = navController,
             viewModel = viewModel,
             resultLauncher = resultLauncher,
-            speechText = speechText
+            speechText = speechText,
+            mainActivity = mainActivity,
+            currentLocation = currentLocation
         )
     }
 }
@@ -49,7 +56,9 @@ fun HomeContent(
     navController: NavController,
     viewModel: HomeViewModel,
     resultLauncher: ActivityResultLauncher<Intent>,
-    speechText: MutableState<String>
+    speechText: MutableState<String>,
+    mainActivity: MainActivity,
+    currentLocation: MutableState<Location?>
 ) {
     Scaffold(
         modifier = Modifier.padding(bottom = 24.dp),
@@ -73,7 +82,13 @@ fun HomeContent(
             .fillMaxWidth()
         ) {
             HomeAppBar(navController, viewModel)
-            ReminderList(resultLauncher, speechText, navController)
+            ReminderList(
+                resultLauncher,
+                speechText,
+                navController,
+                mainActivity,
+                currentLocation
+            )
         }
     }
 }

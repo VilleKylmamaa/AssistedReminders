@@ -33,6 +33,7 @@ import com.ville.assistedreminders.ui.theme.reminderMessage
 import com.ville.assistedreminders.ui.theme.secondaryButtonBackground
 import com.ville.assistedreminders.util.makeLongToast
 import com.ville.assistedreminders.util.makeShortToast
+import com.ville.assistedreminders.util.notifyNewReminder
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -190,15 +191,14 @@ fun AddReminder(
                                         )
 
                                         // Immediately notify about a new reminder
-                                        //notifyNewReminder(newReminder)
+                                        notifyNewReminder(newReminder)
 
                                         when {
                                             schedulingCheckedState.value
                                                     && locationCheckedState.value -> {
                                                 makeLongToast(
                                                     context,
-                                                    "You will be notified when the reminder is " +
-                                                        "due AND when within 200m of the location"
+                                                    "Both time AND Geofence set"
                                                 )
                                             }
                                             schedulingCheckedState.value -> {

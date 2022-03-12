@@ -9,7 +9,7 @@ import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
 import com.ville.assistedreminders.ui.MainActivity
-import com.ville.assistedreminders.util.createGeoFenceNotification
+import com.ville.assistedreminders.util.notifyGeofence
 
 class GeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
@@ -35,12 +35,13 @@ class GeofenceReceiver : BroadcastReceiver() {
                 val triggeringGeoFences = geofencingEvent.triggeringGeofences
                 val message = intent.getStringExtra("message")
                 val reminderTime = intent.getLongExtra("reminderTime", 0)
+                val notificationId = intent.getLongExtra("notificationId", 0)
                 Log.d("geofenceTriggered", "Message: $message, time: $reminderTime")
 
                 // Notify if the time set for the reminder has been passed
                 if (System.currentTimeMillis() > reminderTime) {
                     Log.d("geofenceNotify", "Geofence notification sent")
-                    createGeoFenceNotification(context.applicationContext, "$message")
+                    notifyGeofence("Location Reminder", "$message", notificationId)
                     MainActivity.removeGeoFences(context, triggeringGeoFences)
                 }
             } else {

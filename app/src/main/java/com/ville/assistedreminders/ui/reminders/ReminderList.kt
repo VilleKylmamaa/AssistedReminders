@@ -1,6 +1,7 @@
 package com.ville.assistedreminders.ui.reminders
 
 import android.content.Intent
+import android.location.Location
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ville.assistedreminders.data.entity.Reminder
 import com.ville.assistedreminders.data.entity.room.ReminderToAccount
+import com.ville.assistedreminders.ui.MainActivity
 import com.ville.assistedreminders.ui.reminders.reminderDialog.AddNotificationDialog
 import com.ville.assistedreminders.ui.reminders.reminderDialog.ChooseIconDialog
 import com.ville.assistedreminders.ui.reminders.reminderDialog.DeleteDialog
@@ -37,10 +39,17 @@ import java.util.*
 fun ReminderList(
     resultLauncher: ActivityResultLauncher<Intent>,
     speechText: MutableState<String>,
-    navController: NavController
+    navController: NavController,
+    mainActivity: MainActivity,
+    currentLocation: MutableState<Location?>
 ) {
     val viewModel: ReminderListViewModel = viewModel(
-        factory = viewModelProviderFactoryOf { ReminderListViewModel() }
+        factory = viewModelProviderFactoryOf {
+            ReminderListViewModel(
+                mainActivity = mainActivity,
+                currentLocation = currentLocation
+            )
+        }
     )
     val viewState by viewModel.state.collectAsState()
     val showAll = remember { mutableStateOf(false) }

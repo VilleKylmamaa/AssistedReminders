@@ -45,7 +45,7 @@ class ReminderViewModel(
         // Save new reminder and get its id
         val newReminderId = reminderRepository.addReminder(reminder)
 
-        // Schedule a notification if notify checkbox was checked
+        // Schedule a notification if scheduling notification checkbox was checked
         // and the given time hasn't already passed
         if (scheduleNotification
             && reminder.reminder_time.time > System.currentTimeMillis()
@@ -60,10 +60,9 @@ class ReminderViewModel(
             scheduleReminderNotification(newNotificationID, reminder, scheduling)
         }
 
-        // Set up a geofence if the location was given and the location
-        // checkbox was checked
+        // Set up a geofence if the location was given and the location checkbox was checked
         if (locationNotification && location != null) {
-            notificationRepository.addNotification(
+            val newNotificationID = notificationRepository.addNotification(
                 Notification(
                     notificationTime = scheduling.time,
                     notificationLatitude = location.latitude,
@@ -72,19 +71,27 @@ class ReminderViewModel(
                 )
             )
 
-            createGeoFence(
-                newReminderId,
-                location,
-                reminder.reminder_time,
-                reminder.message,
-                mainActivity,
-                geofencingClient
-            )
+            // If the scheduling notification checkbox was checked,
+            // create the geofence when the scheduled time comes
+            if (scheduleNotification) {
+                scheduleGeofence(newNotificationID, reminder, scheduling, location)
+
+            // Create the geofence immediately
+            } else {
+                createGeoFence(
+                    newNotificationID,
+                    location,
+                    reminder.reminder_time,
+                    reminder.message,
+                    mainActivity,
+                    geofencingClient
+                )
+            }
         }
     }
 
     private fun createGeoFence(
-        reminderId: Long,
+        notificationId: Long,
         location: LatLng,
         reminderTime: Date,
         reminderMessage: String,
@@ -92,7 +99,7 @@ class ReminderViewModel(
         geofencingClient: GeofencingClient
     ) {
         val geofence = Geofence.Builder()
-            .setRequestId(reminderId.toString())
+            .setRequestId(notificationId.toString())
             .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
@@ -105,7 +112,7 @@ class ReminderViewModel(
             .build()
 
         val geofenceIntent = Intent(mainActivity, GeofenceReceiver::class.java)
-            .putExtra("reminderId", reminderId)
+            .putExtra("notificationId", notificationId)
             .putExtra("reminderTime", reminderTime.time)
             .putExtra(
                     "message", "Message: $reminderMessage" +
@@ -134,21 +141,21 @@ class ReminderViewModel(
             } else {
                 geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)
                     .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
-                            "with id $reminderId added") }
+                            "with id $notificationId added") }
                     .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
                             "Geofence NOT added") }
             }
         } else {
             geofencingClient.addGeofences(geofenceRequest, geofencePendingIntent)
                 .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
-                        "with id $reminderId added") }
+                        "with id $notificationId added") }
                 .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
                         "Geofence NOT added") }
         }
     }
 
     init {
-        createNotificationChannel(context = Graph.appContext)
+        createNotificationChannel(context = Graph.appContext, "CHANNEL_ID")
     }
 }
 

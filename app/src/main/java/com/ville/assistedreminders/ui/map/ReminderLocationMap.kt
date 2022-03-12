@@ -1,12 +1,9 @@
 package com.ville.assistedreminders.ui.map
 
 import android.Manifest
-import android.app.PendingIntent
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +25,6 @@ import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.ktx.awaitMap
-import com.ville.assistedreminders.GeofenceReceiver
 import com.ville.assistedreminders.Graph
 import com.ville.assistedreminders.Graph.accountRepository
 import com.ville.assistedreminders.Graph.reminderRepository
@@ -40,14 +36,11 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.*
 
-var geofenceId = 0
-
 @Composable
 fun ReminderLocationMap(
     navController: NavController,
     mainActivity: MainActivity,
-    fusedLocationClient: FusedLocationProviderClient,
-    geofencingClient: GeofencingClient
+    fusedLocationClient: FusedLocationProviderClient
 ) {
     val mapView = rememberMapViewWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -61,7 +54,6 @@ fun ReminderLocationMap(
         AndroidView({mapView}) { mapView ->
             coroutineScope.launch {
                 val map = mapView.awaitMap()
-                //val fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
                 map.uiSettings.isZoomControlsEnabled = true
 
                 if (!isLocationPermissionGranted()) {
@@ -118,7 +110,7 @@ fun ReminderLocationMap(
                 }
 
                 setMapShortClick(map, coroutineScope)
-                setMapLongClick(map, navController, mainActivity, geofencingClient)
+                setMapLongClick(map, navController)
             }
         }
     }
@@ -187,9 +179,7 @@ private fun setMapShortClick(
 
 private fun setMapLongClick(
     map: GoogleMap,
-    navController: NavController,
-    mainActivity: MainActivity,
-    geofencingClient: GeofencingClient
+    navController: NavController
 ) {
     map.setOnMapLongClickListener { clickedLocation ->
         map.clear()
@@ -220,69 +210,6 @@ private fun setMapLongClick(
                 .strokeColor(Color(0xA65A5A5A).toArgb())
                 .fillColor(Color(0x6680FFE6).toArgb())
         )
-
-        createGeoFence(clickedLocation, mainActivity, geofencingClient)
-    }
-}
-
-
-private fun createGeoFence(
-    location: LatLng,
-    mainActivity: MainActivity,
-    geofencingClient: GeofencingClient
-) {
-    geofenceId += 1
-
-    val geofence = Geofence.Builder()
-        .setRequestId(geofenceId.toString())
-        .setCircularRegion(location.latitude, location.longitude, GEOFENCE_RADIUS.toFloat())
-        .setExpirationDuration(Geofence.NEVER_EXPIRE)
-        .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
-        .setLoiteringDelay(GEOFENCE_DWELL_DELAY)
-        .build()
-
-    val geofenceRequest = GeofencingRequest.Builder()
-        .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-        .addGeofence(geofence)
-        .build()
-
-    val intent = Intent(mainActivity, GeofenceReceiver::class.java)
-        .putExtra("reminderId", geofenceId)
-        .putExtra("reminderTime", 0.toLong())
-        .putExtra("message", "Latitude: ${location.latitude}" +
-                    "\nLongitude: ${location.longitude}")
-
-    val pendingIntent = PendingIntent.getBroadcast(
-        mainActivity,
-        0,
-        intent,
-        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-    )
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        if (ContextCompat.checkSelfPermission(
-                Graph.appContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                mainActivity,
-                arrayOf(
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                ),
-                GEOFENCE_LOCATION_REQUEST_CODE
-            )
-        } else {
-            geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-                .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
-                        "with id $geofenceId added") }
-                .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
-                        "Geofence NOT added") }
-        }
-    } else {
-        geofencingClient.addGeofences(geofenceRequest, pendingIntent)
-            .addOnSuccessListener { Log.d("GeofenceAdded", "onSuccess: Geofence " +
-                    "with id $geofenceId added") }
-            .addOnFailureListener { Log.d("GeofenceNotAdded", "onFailure: " +
-                    "Geofence NOT added") }
     }
 }
 

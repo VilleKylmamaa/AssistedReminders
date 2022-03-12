@@ -1,6 +1,7 @@
 package com.ville.assistedreminders.ui
 
 import android.content.Intent
+import android.location.Location
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -23,7 +24,8 @@ fun AssistedReminders(
     speechText: MutableState<String>,
     mainActivity: MainActivity,
     geofencingClient: GeofencingClient,
-    fusedLocationClient: FusedLocationProviderClient
+    fusedLocationClient: FusedLocationProviderClient,
+    currentLocation: MutableState<Location?>
 ){
     NavHost(
         navController = appState.navController,
@@ -45,7 +47,9 @@ fun AssistedReminders(
         composable(route = "home") {
             Home(navController = appState.navController,
                 resultLauncher = resultLauncher,
-                speechText = speechText
+                speechText = speechText,
+                mainActivity = mainActivity,
+                currentLocation = currentLocation
             )
         }
 
@@ -64,8 +68,7 @@ fun AssistedReminders(
             ReminderLocationMap(
                 mainActivity = mainActivity,
                 navController = appState.navController,
-                fusedLocationClient = fusedLocationClient,
-                geofencingClient = geofencingClient
+                fusedLocationClient = fusedLocationClient
             )
         }
     }
