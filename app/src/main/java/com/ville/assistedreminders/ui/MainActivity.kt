@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var geofencingClient: GeofencingClient
-    private var currentLocation: Location? = null
+    private var currentLocation: MutableState<Location?> = mutableStateOf(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +40,9 @@ class MainActivity : ComponentActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         geofencingClient = LocationServices.getGeofencingClient(this)
+        currentLocation.value = null
 
+        // Get location permissions
         val locationPermissionRequest = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
@@ -64,35 +66,9 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_COARSE_LOCATION)
         )
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return
-        }
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location : Location? ->
-                currentLocation = location
-                Log.d("geofenceCurrentLocation", "Current location: $currentLocation")
-            }
-/*
-        val locationWorker = PeriodicWorkRequestBuilder<LocationWorker>(
-            repeatInterval = 15, TimeUnit.MINUTES
-        ).build()
-        val workManager = WorkManager.getInstance(Graph.appContext)
-        workManager.enqueue(locationWorker)
-*/
+        getCurrentLocation()
 
+        // result launcher for speech-to-text
         val resultLauncher = registerForActivityResult(StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 val data: Intent? = result.data
@@ -115,12 +91,37 @@ class MainActivity : ComponentActivity() {
                             resultLauncher = resultLauncher,
                             speechText = speechText,
                             fusedLocationClient = fusedLocationClient,
-                            geofencingClient = geofencingClient
+                            geofencingClient = geofencingClient,
+                            currentLocation = currentLocation
                         )
                     }
                 }
             }
         }
+    }
+
+    fun getCurrentLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location : Location? ->
+                currentLocation.value = location
+                Log.d("geofenceCurrentLocation", "Current location: $currentLocation")
+            }
     }
 
     @Deprecated("Deprecated in Java")

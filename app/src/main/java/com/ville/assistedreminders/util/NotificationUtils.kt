@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.*
+import com.google.android.gms.maps.model.LatLng
 import com.ville.assistedreminders.Graph
 import com.ville.assistedreminders.R
 import com.ville.assistedreminders.data.entity.Reminder
@@ -16,13 +17,17 @@ import com.ville.assistedreminders.ui.MainActivity
 import com.ville.assistedreminders.ui.reminders.formatToString
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.random.Random
 
 
 fun notifyNewReminder(reminder: Reminder) {
     val appContext = Graph.appContext
-    val notificationId = 0
+    val notificationId = 99999
+    val message = "Message: ${reminder.message}" +
+            "\nDue: ${reminder.reminder_time.formatToString()}" +
+            "\nLatitude: ${reminder.location_x}" +
+            "\nLongitude: ${reminder.location_y}"
 
+    // Make notification clickable
     val intent = Intent(appContext, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     }
@@ -32,27 +37,28 @@ fun notifyNewReminder(reminder: Reminder) {
         intent,
         PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-    val builder = NotificationCompat.Builder(Graph.appContext, "CHANNEL_ID")
+    val notificationBuilder = NotificationCompat.Builder(Graph.appContext, "CHANNEL_ID")
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle("Reminder Created Successfully")
-        .setContentText("Message: ${reminder.message}" +
-                "\nDue: ${reminder.reminder_time.formatToString()}"
-        )
+        .setContentText(message)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
 
     with(NotificationManagerCompat.from(Graph.appContext)) {
-        notify(notificationId, builder.build())
+        notify(notificationId, notificationBuilder.build())
     }
 }
 
 fun scheduleReminderNotification(notificationId: Long, reminder: Reminder, notificationTime: Calendar) {
+    val message = "Message: ${reminder.message}" +
+            "\nDue: ${reminder.reminder_time.formatToString()}"
+
     val data: Data = Data.Builder()
-        .putString("NOTIFICATION_MESSAGE", reminder.message)
-        .putString("NOTIFICATION_DUE", reminder.reminder_time.formatToString())
+        .putString("NOTIFICATION_MESSAGE", message)
         .putLong("NOTIFICATION_ID", notificationId)
         .build()
+
     val timeUntilNotification = notificationTime.timeInMillis - System.currentTimeMillis()
     val notificationWorker = OneTimeWorkRequestBuilder<NotificationWorker>()
         .setInitialDelay(timeUntilNotification, TimeUnit.MILLISECONDS)
@@ -63,9 +69,10 @@ fun scheduleReminderNotification(notificationId: Long, reminder: Reminder, notif
     workManager.enqueue(notificationWorker)
 }
 
-fun createReminderNotification(message: String, dueDate: String, reminderId: Long) {
+fun notifyReminder(message: String, reminderId: Long) {
     val appContext = Graph.appContext
 
+    // Make notification clickable
     val intent = Intent(appContext, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     }
@@ -75,57 +82,85 @@ fun createReminderNotification(message: String, dueDate: String, reminderId: Lon
         intent,
         PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-    val builder = NotificationCompat.Builder(appContext, "CHANNEL_ID")
+    val notificationBuilder = NotificationCompat.Builder(appContext, "CHANNEL_ID")
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle("Scheduled Reminder")
-        .setContentText("Message: $message\nDue: $dueDate")
+        .setContentText(message)
         .setPriority(NotificationCompat.PRIORITY_MAX)
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
 
     with(NotificationManagerCompat.from(appContext)) {
-        notify(reminderId.toInt(), builder.build())
+        notify(reminderId.toInt(), notificationBuilder.build())
     }
 }
 
-fun createGeoFenceNotification(context: Context?, message: String) {
-    val CHANNEL_ID = "LOCATION_NOTIFICATION_CHANNEL"
-    var notificationId = 5555
-    notificationId += Random(notificationId).nextInt(1, 30)
+fun notifyGeofence(title: String, message: String, notificationId: Long) {
+    val appContext = Graph.appContext
 
-    val notificationBuilder = NotificationCompat.Builder(context!!.applicationContext, CHANNEL_ID)
+    // Make notification clickable
+    val intent = Intent(appContext, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    val pendingIntent: PendingIntent = PendingIntent.getActivity(
+        appContext,
+        0,
+        intent,
+        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+
+    val notificationBuilder = NotificationCompat.Builder(appContext.applicationContext,
+        "LOCATION_NOTIFICATION_CHANNEL")
         .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("Location Reminder")
+        .setContentTitle(title)
         .setContentText(message)
-        .setStyle(
-            NotificationCompat.BigTextStyle()
-                .bigText(message)
-        )
+        .setStyle(NotificationCompat.BigTextStyle().bigText(message))
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
 
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.app_name),
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply {
-            description = context.getString(R.string.app_name)
-        }
-        notificationManager.createNotificationChannel(channel)
-    }
-    notificationManager.notify(notificationId, notificationBuilder.build())
+    createNotificationChannel(appContext, "LOCATION_NOTIFICATION_CHANNEL")
+    notificationManager.notify(notificationId.toInt(), notificationBuilder.build())
 }
 
-fun createNotificationChannel(context: Context) {
+fun scheduleGeofence(
+    notificationId: Long,
+    reminder: Reminder,
+    notificationTime: Calendar,
+    location: LatLng
+) {
+    val title = "Timed Location Reminder"
+    val message = "Message: ${reminder.message}" +
+            "\n\nDue: ${reminder.reminder_time.formatToString()}" +
+            "\n\nLatitude: ${location.latitude}" +
+            "\nLongitude: ${location.longitude}"
+
+    val data: Data = Data.Builder()
+        .putString("NOTIFICATION_TITLE", title)
+        .putString("NOTIFICATION_MESSAGE", message)
+        .putString("NOTIFICATION_LOCATION", location.toString())
+        .putLong("NOTIFICATION_ID", notificationId)
+        .build()
+
+    val timeUntilNotification = notificationTime.timeInMillis - System.currentTimeMillis()
+    val notificationWorker = OneTimeWorkRequestBuilder<NotificationWorker>()
+        .setInitialDelay(timeUntilNotification, TimeUnit.MILLISECONDS)
+        .setInputData(data)
+        .build()
+
+    val workManager = WorkManager.getInstance(Graph.appContext)
+    workManager.enqueue(notificationWorker)
+}
+
+fun createNotificationChannel(context: Context, channelId: String) {
     // Create the NotificationChannel, but only on API 26+ because
     // the NotificationChannel class is new and not in the support library
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val name = "NotificationChannel"
         val descriptionText = "Channel for handling notifications"
         val importance = NotificationManager.IMPORTANCE_HIGH
-        val channel = NotificationChannel("CHANNEL_ID", name, importance).apply {
+        val channel = NotificationChannel(channelId, name, importance).apply {
             description = descriptionText
         }
         // register the channel with the system
