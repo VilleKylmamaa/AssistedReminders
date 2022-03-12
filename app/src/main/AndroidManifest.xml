@@ -24,8 +24,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AssistedReminders">
 
+        /* TODO: PROVIDE YOUR OWN GOOGLE MAPS API KEY */
         <meta-data android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAWNfcBGw4EvmleRxlgfXVGNEnjP_v1cZg" />
+            android:value="TODO: GOOGLE MAPS API KEY HERE" />
 
         <activity
             android:name=".ui.MainActivity"
